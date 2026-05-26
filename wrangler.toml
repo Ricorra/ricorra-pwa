@@ -1,5 +1,6 @@
 name = "ricorra-pwa"
 compatibility_date = "2025-09-27"
+main = "_worker.js"
 
 [assets]
 directory = "."
