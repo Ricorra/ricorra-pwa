@@ -1,0 +1,4390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Ricorra">
+<meta name="theme-color" content="#C49A3C">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<title>Ricorra — Subscriptions, self-sovereign.</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* ═══════════════════════════════════════════════════════
+   CSS VARIABLES — LIGHT MODE
+═══════════════════════════════════════════════════════ */
+:root {
+  --amber:        #C49A3C;
+  --amber-light:  #D4AA52;
+  --amber-pale:   #FAF0D7;
+  --amber-deep:   #9E7A28;
+  --amber-orange: #D46B2A;
+  --parchment:    #FAF8F4;
+  --warm-white:   #F2EFE9;
+  --charcoal:     #1C1C1A;
+  --gray:         #F2EFE9;
+  --gray-mid:     #E2DDD6;
+  --gray-text:    #6B6860;
+  --stone:        #E2DDD6;
+  --green:        #2D6A4F;
+  --green-pale:   #EAF5EF;
+  --red:          #991B1B;
+  --red-pale:     #FEE2E2;
+  --radius:       16px;
+  --shadow:       0 4px 24px rgba(0,0,0,0.07);
+  --shadow-lg:    0 12px 48px rgba(0,0,0,0.12);
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-ui:      'DM Sans', system-ui, sans-serif;
+}
+
+/* ── DARK MODE ── */
+body.dark-mode {
+  --charcoal:    #F0EDE8;
+  --parchment:   #18180F;
+  --warm-white:  #1E1E16;
+  --gray:        #131310;
+  --gray-mid:    #2C2C22;
+  --gray-text:   #9A9690;
+  --stone:       #2C2C22;
+  --green-pale:  #0D2E1A;
+  --amber-pale:  #2A1E00;
+  --amber-deep:  #D4AA52;
+  --red-pale:    #2D0B0B;
+  --shadow:      0 4px 24px rgba(0,0,0,0.5);
+  --shadow-lg:   0 12px 48px rgba(0,0,0,0.7);
+}
+body.dark-mode #ricorra-bokeh { opacity: 0.25; }
+body.dark-mode .modal-sheet,
+body.dark-mode .wizard-sheet  { background: var(--warm-white); }
+body.dark-mode .modal-overlay  { background: rgba(0,0,0,0.85); }
+
+/* ── RESET ── */
+*, *::before, *::after {
+  margin: 0; padding: 0; box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── BASE ── */
+body {
+  font-family: var(--font-ui);
+  background: var(--gray);
+  color: var(--charcoal);
+  min-height: 100vh;
+  max-width: 480px;
+  margin: 0 auto;
+  position: relative;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── SCREEN SYSTEM ── */
+.screen {
+  display: none;
+  flex-direction: column;
+  min-height: 100vh;
+  padding-bottom: 84px;
+  animation: screenIn 0.22s ease;
+  background: var(--gray);
+}
+.screen.active { display: flex; }
+@keyframes screenIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── TOP BAR ── */
+.topbar {
+  background: var(--parchment);
+  padding: 16px 20px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--gray-mid);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.topbar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.topbar-mark {
+  width: 34px; height: 34px;
+  flex-shrink: 0;
+}
+.topbar-wordmark {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: var(--charcoal);
+  line-height: 1;
+}
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.topbar-biz {
+  font-size: 12px;
+  color: var(--gray-text);
+  font-weight: 400;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+}
+
+/* Rate badge */
+.rate-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--amber);
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s;
+  white-space: nowrap;
+}
+.rate-badge.offline { background: rgba(153,27,27,0.85); }
+.rate-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.85);
+  animation: pulse-dot 2s infinite;
+  flex-shrink: 0;
+}
+.rate-dot.offline { animation: none; background: #FCA5A5; }
+@keyframes pulse-dot {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.5; transform: scale(0.7); }
+}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav {
+  position: fixed;
+  bottom: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 100%; max-width: 480px;
+  background: var(--parchment);
+  border-top: 1px solid var(--gray-mid);
+  display: flex;
+  z-index: 20;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.nav-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 10px 4px 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: var(--gray-text);
+}
+.nav-btn.active { color: var(--amber-deep); }
+.nav-btn svg {
+  width: 22px; height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.nav-btn span {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* ── SECTION TITLES ── */
+.section-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--charcoal);
+  letter-spacing: 0.01em;
+}
+.section-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gray-text);
+  margin-bottom: 10px;
+}
+
+/* ── CARDS ── */
+.card {
+  background: var(--parchment);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.card-inner {
+  padding: 18px 20px;
+}
+
+/* ── HOME HERO ── */
+.home-hero {
+  background: var(--amber);
+  padding: 22px 24px 26px;
+  position: relative;
+  overflow: hidden;
+}
+.home-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 60%);
+  pointer-events: none;
+}
+/* Decorative ₿ watermark */
+.hero-watermark {
+  position: absolute;
+  right: -16px; top: -16px;
+  font-family: var(--font-display);
+  font-size: 140px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.09);
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+}
+.hero-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.8);
+  margin-bottom: 10px;
+}
+.hero-mrr {
+  font-family: var(--font-display);
+  font-size: 52px;
+  font-weight: 400;
+  color: white;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+.hero-mrr-sub {
+  font-size: 13px;
+  color: rgba(255,255,255,0.75);
+  margin-top: 4px;
+  font-weight: 400;
+}
+.hero-stats {
+  display: flex;
+  gap: 16px;
+  margin-top: 18px;
+}
+.hero-stat {
+  background: rgba(255,255,255,0.15);
+  border-radius: 10px;
+  padding: 9px 14px;
+  min-width: 80px;
+}
+.hero-stat-val {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 500;
+  color: white;
+  line-height: 1;
+}
+.hero-stat-lbl {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.7);
+  margin-top: 3px;
+}
+.hero-trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.85);
+  margin-top: 10px;
+}
+.hero-trend.up   { color: #BBF7D0; }
+.hero-trend.down { color: #FCA5A5; }
+
+/* ── PLAN CARDS ── */
+.plan-card {
+  background: var(--parchment);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 12px;
+  overflow: hidden;
+  border: 1.5px solid var(--stone);
+  transition: all 0.15s;
+}
+.plan-card:active { transform: scale(0.99); }
+.plan-card-top {
+  padding: 16px 18px 14px;
+  border-bottom: 1px solid var(--stone);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.plan-card-name {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 500;
+  color: var(--charcoal);
+  letter-spacing: 0.01em;
+}
+.plan-card-price {
+  font-size: 13px;
+  color: var(--gray-text);
+  margin-top: 2px;
+  font-weight: 400;
+}
+.plan-badge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.plan-badge.active   { background: var(--amber-pale); color: var(--amber-deep); }
+.plan-badge.paused   { background: var(--gray-mid);   color: var(--gray-text); }
+.plan-badge.archived { background: var(--red-pale);   color: var(--red); }
+.plan-card-bottom {
+  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.plan-card-meta {
+  font-size: 12px;
+  color: var(--gray-text);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.plan-card-meta span { display: flex; align-items: center; gap: 4px; }
+.plan-card-actions {
+  display: flex;
+  gap: 8px;
+}
+.plan-action-btn {
+  background: none;
+  border: 1px solid var(--stone);
+  border-radius: 8px;
+  padding: 5px 11px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--gray-text);
+  transition: all 0.15s;
+}
+.plan-action-btn:hover   { border-color: var(--amber); color: var(--amber-deep); }
+.plan-action-btn.primary { background: var(--amber); border-color: var(--amber); color: white; }
+
+/* ── SUBSCRIBER ROWS ── */
+.subscriber-row {
+  background: var(--parchment);
+  border-bottom: 1px solid var(--stone);
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: background 0.12s;
+  cursor: pointer;
+}
+.subscriber-row:last-child { border-bottom: none; }
+.subscriber-row:active { background: var(--warm-white); }
+.subscriber-avatar {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--amber-pale);
+  border: 1.5px solid var(--amber-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--amber-deep);
+  flex-shrink: 0;
+}
+.subscriber-info { flex: 1; min-width: 0; }
+.subscriber-email {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--charcoal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.subscriber-plan {
+  font-size: 11px;
+  color: var(--gray-text);
+  margin-top: 2px;
+}
+.subscriber-right { text-align: right; flex-shrink: 0; }
+.subscriber-amount {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--charcoal);
+}
+.subscriber-renewal {
+  font-size: 10px;
+  color: var(--gray-text);
+  margin-top: 2px;
+}
+.subscriber-status {
+  display: inline-block;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+.subscriber-status.active   { background: var(--green); }
+.subscriber-status.overdue  { background: #F59E0B; }
+.subscriber-status.canceled { background: var(--gray-text); }
+
+/* ── HISTORY ROWS ── */
+.history-row {
+  background: var(--parchment);
+  border-bottom: 1px solid var(--stone);
+  padding: 13px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.history-row:last-child { border-bottom: none; }
+.history-coin-icon {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: var(--amber-pale);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.history-info { flex: 1; min-width: 0; }
+.history-plan  {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--charcoal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.history-sub {
+  font-size: 11px;
+  color: var(--gray-text);
+  margin-top: 2px;
+}
+.history-right { text-align: right; flex-shrink: 0; }
+.history-amount {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--charcoal);
+}
+.history-time {
+  font-size: 10px;
+  color: var(--gray-text);
+  margin-top: 2px;
+}
+.history-delete {
+  background: none;
+  border: none;
+  color: var(--gray-text);
+  font-size: 15px;
+  cursor: pointer;
+  padding: 4px 6px;
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+.history-delete:hover { opacity: 1; color: var(--red); }
+
+/* ── PERIOD PILLS ── */
+.period-pills {
+  display: flex;
+  gap: 6px;
+  padding: 12px 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.period-pills::-webkit-scrollbar { display: none; }
+.period-btn {
+  background: var(--parchment);
+  border: 1.5px solid var(--stone);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--gray-text);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.period-btn.active {
+  background: var(--amber);
+  border-color: var(--amber);
+  color: white;
+}
+
+/* ── EXPORT BUTTONS ── */
+.export-btn {
+  background: var(--amber-pale);
+  color: var(--amber-deep);
+  border: none;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.export-btn:active { transform: scale(0.97); }
+.export-btn svg {
+  width: 14px; height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ── SETTINGS ── */
+.settings-section {
+  background: var(--parchment);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.settings-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gray-text);
+  padding: 14px 18px 0;
+  margin-bottom: 10px;
+}
+.settings-row {
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--stone);
+}
+.settings-row:last-child { border-bottom: none; }
+.settings-row label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--charcoal);
+  margin-bottom: 6px;
+}
+.settings-hint {
+  font-size: 11px;
+  color: var(--gray-text);
+  line-height: 1.5;
+  margin-top: 5px;
+}
+.settings-input {
+  width: 100%;
+  background: var(--gray);
+  border: 1.5px solid var(--stone);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  color: var(--charcoal);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.settings-input:focus { border-color: var(--amber); }
+
+/* Toggle */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--stone);
+}
+.toggle-row:last-child { border-bottom: none; }
+.toggle-label-group { flex: 1; padding-right: 16px; }
+.toggle-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--charcoal);
+}
+.toggle-hint {
+  font-size: 11px;
+  color: var(--gray-text);
+  line-height: 1.4;
+  margin-top: 3px;
+}
+.toggle-wrap { position: relative; width: 44px; height: 26px; flex-shrink: 0; }
+.toggle-input { opacity: 0; width: 0; height: 0; position: absolute; }
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: var(--stone);
+  border-radius: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 20px; height: 20px;
+  left: 3px; top: 3px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+.toggle-input:checked + .toggle-slider { background: var(--amber); }
+.toggle-input:checked + .toggle-slider::before { transform: translateX(18px); }
+
+/* ── SAVE BUTTON ── */
+.save-btn {
+  width: 100%;
+  background: var(--amber);
+  color: white;
+  border: none;
+  border-radius: 50px;
+  padding: 14px;
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.02em;
+}
+.save-btn:active { transform: scale(0.98); background: var(--amber-deep); }
+
+/* ── PRIMARY BUTTON ── */
+.primary-btn {
+  background: var(--amber);
+  color: white;
+  border: none;
+  border-radius: 50px;
+  padding: 13px 24px;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.primary-btn:active { transform: scale(0.97); background: var(--amber-deep); }
+.secondary-btn {
+  background: var(--warm-white);
+  color: var(--gray-text);
+  border: 1.5px solid var(--stone);
+  border-radius: 50px;
+  padding: 12px 22px;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.secondary-btn:active { transform: scale(0.97); }
+
+/* ── EMPTY STATE ── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 48px 32px;
+  gap: 12px;
+}
+.empty-icon {
+  width: 56px; height: 56px;
+  background: var(--amber-pale);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  margin-bottom: 4px;
+}
+.empty-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--charcoal);
+}
+.empty-body {
+  font-size: 13px;
+  color: var(--gray-text);
+  line-height: 1.6;
+  max-width: 260px;
+}
+
+/* ── KOINLY PROMO ── */
+.koinly-promo {
+  background: var(--parchment);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin: 12px 16px;
+  padding: 16px 18px;
+}
+.koinly-promo-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.koinly-promo-text { flex: 1; }
+.koinly-promo-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--charcoal);
+  margin-bottom: 3px;
+}
+.koinly-promo-sub {
+  font-size: 12px;
+  color: var(--gray-text);
+  line-height: 1.5;
+}
+.koinly-promo-icon { font-size: 22px; flex-shrink: 0; }
+.koinly-promo-links {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.koinly-promo-links a {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--amber-deep);
+  text-decoration: none;
+  border: 1px solid var(--amber);
+  border-radius: 8px;
+  padding: 5px 12px;
+  transition: all 0.15s;
+}
+.koinly-promo-links a:hover { background: var(--amber-pale); }
+
+/* ── HISTORY TOTAL BAR ── */
+.history-total-bar {
+  background: var(--parchment);
+  border-radius: var(--radius);
+  margin: 0 16px 12px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow);
+}
+.history-total-num {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 500;
+  color: var(--charcoal);
+}
+.history-total-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--gray-text);
+  margin-top: 2px;
+}
+.history-count {
+  font-size: 12px;
+  color: var(--gray-text);
+  text-align: right;
+}
+
+/* ── SEARCH BAR ── */
+.search-wrap {
+  padding: 10px 16px 6px;
+  position: relative;
+}
+.search-input {
+  width: 100%;
+  background: var(--parchment);
+  border: 1.5px solid var(--stone);
+  border-radius: 10px;
+  padding: 9px 14px 9px 36px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--charcoal);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.search-input:focus { border-color: var(--amber); }
+.search-icon {
+  position: absolute;
+  left: 26px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 15px; height: 15px;
+  fill: none;
+  stroke: var(--gray-text);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+/* ── MODAL OVERLAYS ── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 100;
+  align-items: flex-end;
+  justify-content: center;
+}
+.modal-overlay.active {
+  display: flex;
+  animation: overlayIn 0.18s ease;
+}
+@keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
+.modal-sheet {
+  background: var(--parchment);
+  border-radius: 20px 20px 0 0;
+  width: 100%;
+  max-width: 480px;
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: 24px 20px 32px;
+  animation: sheetUp 0.22s ease;
+}
+@keyframes sheetUp {
+  from { transform: translateY(40px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.modal-handle {
+  width: 36px; height: 4px;
+  background: var(--stone);
+  border-radius: 2px;
+  margin: 0 auto 20px;
+}
+.modal-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--charcoal);
+  margin-bottom: 6px;
+}
+.modal-sub {
+  font-size: 13px;
+  color: var(--gray-text);
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+/* ── CSV MODAL ── */
+#csv-range-modal .modal-sheet { padding-bottom: env(safe-area-inset-bottom, 24px); }
+
+/* ── ABOUT SCREEN ── */
+.about-hero {
+  background: var(--amber);
+  padding: 28px 24px 32px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.about-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 60%);
+  pointer-events: none;
+}
+.about-wordmark {
+  font-family: var(--font-display);
+  font-size: 38px;
+  font-weight: 300;
+  color: white;
+  letter-spacing: 0.12em;
+  margin-bottom: 6px;
+}
+.about-tagline {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.8);
+}
+
+/* ── ABOUT CARDS ── */
+.about-card {
+  background: var(--parchment);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 18px 20px;
+  margin-bottom: 10px;
+}
+.about-card-title {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--charcoal);
+  margin-bottom: 7px;
+}
+.about-card-body {
+  font-size: 13px;
+  color: var(--gray-text);
+  line-height: 1.6;
+}
+.about-footer {
+  text-align: center;
+  padding: 20px 16px 8px;
+  font-size: 11px;
+  color: var(--gray-text);
+  line-height: 1.7;
+}
+.about-footer a {
+  color: var(--amber-deep);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--charcoal);
+  color: var(--parchment);
+  padding: 11px 20px;
+  border-radius: 50px;
+  font-size: 13px;
+  font-weight: 600;
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.25s;
+  white-space: nowrap;
+  max-width: calc(100vw - 40px);
+}
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ── PLAN CREATE FORM ── */
+.form-group { margin-bottom: 16px; }
+.form-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gray-text);
+  margin-bottom: 7px;
+}
+.form-input {
+  width: 100%;
+  background: var(--gray);
+  border: 1.5px solid var(--stone);
+  border-radius: 10px;
+  padding: 11px 14px;
+  font-family: var(--font-ui);
+  font-size: 15px;
+  color: var(--charcoal);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.form-input:focus { border-color: var(--amber); }
+.form-input.prefix-wrap { padding-left: 28px; }
+.input-prefix-group {
+  position: relative;
+}
+.input-prefix {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 15px;
+  color: var(--gray-text);
+  pointer-events: none;
+}
+.interval-pills {
+  display: flex;
+  gap: 8px;
+}
+.interval-pill {
+  flex: 1;
+  background: var(--gray);
+  border: 1.5px solid var(--stone);
+  border-radius: 10px;
+  padding: 10px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--gray-text);
+  text-align: center;
+  transition: all 0.15s;
+}
+.interval-pill.active {
+  background: var(--amber-pale);
+  border-color: var(--amber);
+  color: var(--amber-deep);
+}
+
+/* ── SUBSCRIBER DETAIL MODAL ── */
+.sub-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.sub-detail-avatar {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  background: var(--amber-pale);
+  border: 2px solid var(--amber-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--amber-deep);
+  flex-shrink: 0;
+}
+.sub-detail-info { flex: 1; }
+.sub-detail-email {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--charcoal);
+  word-break: break-all;
+}
+.sub-detail-plan {
+  font-size: 12px;
+  color: var(--gray-text);
+  margin-top: 2px;
+}
+
+/* ── SHARE LINK COPY ── */
+.share-link-box {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  background: var(--gray);
+  border: 1.5px solid var(--stone);
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+.share-link-url {
+  flex: 1;
+  font-size: 12px;
+  color: var(--gray-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'Courier New', monospace;
+}
+.share-link-copy {
+  background: var(--amber);
+  color: white;
+  border: none;
+  border-radius: 7px;
+  padding: 5px 12px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.share-link-copy:active { background: var(--amber-deep); }
+
+/* ── ANALYTICS STAT CARDS ── */
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 12px 16px 0;
+}
+.stat-card {
+  background: var(--parchment);
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+}
+.stat-card-val {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--charcoal);
+  line-height: 1;
+}
+.stat-card-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gray-text);
+  margin-top: 5px;
+}
+
+/* ── TANGEM CARD ── */
+.tangem-card {
+  background: linear-gradient(135deg, var(--charcoal) 0%, #2C2C1E 100%);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+.tangem-text { flex: 1; }
+.tangem-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 3px;
+}
+.tangem-sub {
+  font-size: 11px;
+  color: rgba(255,255,255,0.6);
+  line-height: 1.4;
+}
+.tangem-btn {
+  background: var(--amber);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.tangem-btn:active { background: var(--amber-deep); }
+
+/* ── FAQs ── */
+.faq-item {
+  border-bottom: 1px solid var(--stone);
+}
+.faq-item:last-child { border-bottom: none; }
+.faq-question {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 18px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--charcoal);
+  gap: 10px;
+}
+.faq-chevron {
+  font-size: 10px;
+  color: var(--gray-text);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+.faq-item.open .faq-chevron { transform: rotate(180deg); }
+.faq-answer {
+  display: none;
+  padding: 0 18px 14px;
+  font-size: 12px;
+  color: var(--gray-text);
+  line-height: 1.6;
+}
+.faq-item.open .faq-answer { display: block; }
+
+/* ── RTL SUPPORT ── */
+body[dir="rtl"] .topbar-right { text-align: left; }
+body[dir="rtl"] .history-right { text-align: left; }
+body[dir="rtl"] .subscriber-right { text-align: left; }
+body[dir="rtl"] .search-input { padding: 9px 36px 9px 14px; }
+body[dir="rtl"] .search-icon { left: auto; right: 26px; }
+
+/* ── HOME QUICK STATS ROW ── */
+.home-quick-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 12px 16px 4px;
+}
+.quick-stat-card {
+  background: var(--parchment);
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+}
+.quick-stat-card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--amber);
+  border-radius: 14px 14px 0 0;
+}
+.quick-stat-card.green::after { background: var(--green); }
+.quick-stat-card.orange::after { background: var(--amber-orange); }
+.quick-stat-card.charcoal::after { background: var(--charcoal); }
+.qs-val {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 500;
+  color: var(--charcoal);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.qs-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gray-text);
+}
+.qs-sub {
+  font-size: 11px;
+  color: var(--gray-text);
+  margin-top: 3px;
+}
+
+/* ── RENEWAL OUTLOOK CARD ── */
+.renewal-card {
+  background: var(--parchment);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin: 4px 16px 4px;
+  overflow: hidden;
+}
+.renewal-card-header {
+  padding: 13px 16px 10px;
+  border-bottom: 1px solid var(--stone);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.renewal-card-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gray-text);
+}
+.renewal-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--stone);
+  gap: 10px;
+}
+.renewal-row:last-child { border-bottom: none; }
+.renewal-info { flex: 1; min-width: 0; }
+.renewal-email {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--charcoal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.renewal-plan {
+  font-size: 11px;
+  color: var(--gray-text);
+  margin-top: 1px;
+}
+.renewal-right { text-align: right; flex-shrink: 0; }
+.renewal-date {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--charcoal);
+}
+.renewal-days {
+  font-size: 10px;
+  margin-top: 1px;
+}
+.renewal-days.soon   { color: #D97706; font-weight: 700; }
+.renewal-days.urgent { color: var(--red); font-weight: 700; }
+.renewal-days.ok     { color: var(--gray-text); }
+
+/* ── ACTIVITY FEED ROW ── */
+.activity-row {
+  background: var(--parchment);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 8px;
+  padding: 13px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.activity-icon-wrap {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.activity-icon-wrap.payment  { background: var(--green-pale); }
+.activity-icon-wrap.plan     { background: var(--amber-pale); }
+.activity-icon-wrap.subscriber { background: #EDE9FE; }
+.activity-icon-wrap.renewal  { background: var(--gray); }
+.activity-info { flex: 1; min-width: 0; }
+.activity-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--charcoal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.activity-sub {
+  font-size: 11px;
+  color: var(--gray-text);
+  margin-top: 2px;
+}
+.activity-right { text-align: right; flex-shrink: 0; }
+.activity-amount {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--green);
+}
+.activity-time {
+  font-size: 10px;
+  color: var(--gray-text);
+  margin-top: 2px;
+}
+
+/* ── UTILITY ── */
+.mt-8  { margin-top: 8px; }
+.mt-12 { margin-top: 12px; }
+.mt-16 { margin-top: 16px; }
+.mb-12 { margin-bottom: 12px; }
+.p-16  { padding: 16px; }
+.divider {
+  height: 1px;
+  background: var(--stone);
+  margin: 0 16px;
+}
+
+/* ── SCREEN PADDING ── */
+.screen-pad { padding: 0 16px; }
+
+/* ── HEADER ROW (section header + action button) ── */
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 10px;
+}
+
+/* ── LOGIN SCREEN (shown when not authenticated) ── */
+#login-screen {
+  display: none;
+  min-height: 100vh;
+  background: var(--parchment);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+}
+#login-screen.active { display: flex; }
+.login-mark {
+  margin-bottom: 24px;
+}
+.login-card {
+  width: 100%;
+  max-width: 360px;
+  background: white;
+  border-radius: 20px;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+.login-card-top {
+  height: 4px;
+  background: var(--amber);
+}
+.login-card-inner { padding: 28px 24px 24px; }
+.login-title {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 400;
+  color: var(--charcoal);
+  margin-bottom: 6px;
+}
+.login-title em { color: var(--amber); font-style: italic; }
+.login-sub {
+  font-size: 13px;
+  color: var(--gray-text);
+  margin-bottom: 22px;
+  line-height: 1.5;
+}
+.login-input {
+  width: 100%;
+  background: var(--gray);
+  border: 1.5px solid var(--stone);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-family: var(--font-ui);
+  font-size: 15px;
+  color: var(--charcoal);
+  outline: none;
+  margin-bottom: 12px;
+  transition: border-color 0.15s;
+}
+.login-input:focus { border-color: var(--amber); }
+.login-btn {
+  width: 100%;
+  background: var(--amber);
+  color: white;
+  border: none;
+  border-radius: 50px;
+  padding: 13px;
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.login-btn:active { background: var(--amber-deep); }
+.login-divider {
+  text-align: center;
+  font-size: 11px;
+  color: var(--gray-text);
+  margin: 14px 0 0;
+  font-style: italic;
+}
+.login-success {
+  display: none;
+  text-align: center;
+  padding: 8px 0;
+}
+.login-success-icon {
+  font-size: 36px;
+  margin-bottom: 12px;
+}
+.login-success-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--charcoal);
+  margin-bottom: 6px;
+}
+.login-success-body {
+  font-size: 13px;
+  color: var(--gray-text);
+  line-height: 1.6;
+}
+.login-footer {
+  margin-top: 24px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--gray-text);
+}
+.login-footer a {
+  color: var(--amber-deep);
+  text-decoration: none;
+  font-weight: 600;
+}
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════
+     LOGIN SCREEN
+════════════════════════════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-mark">
+    <!-- Ricorra circle mark SVG inline -->
+    <svg width="72" height="72" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <style>@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&amp;display=swap');</style>
+      </defs>
+      <circle cx="100" cy="100" r="96" fill="#C49A3C"/>
+      <circle cx="100" cy="100" r="88" fill="none" stroke="#D4AA52" stroke-width="1.5" opacity="0.6"/>
+      <text x="100" y="100" text-anchor="middle" dominant-baseline="central"
+        font-family="'Cormorant Garamond', Georgia, serif" font-size="148" font-weight="400"
+        fill="#FAF8F4" opacity="0.42">₿</text>
+      <text x="100" y="100" text-anchor="middle" dominant-baseline="central"
+        font-family="'Cormorant Garamond', Georgia, serif" font-size="14" font-weight="300"
+        fill="#FAF8F4" letter-spacing="10" dy="-4">ricorra</text>
+    </svg>
+  </div>
+  <div class="login-card">
+    <div class="login-card-top"></div>
+    <div class="login-card-inner">
+      <div id="login-form-wrap">
+        <div class="login-title">Welcome <em>back.</em></div>
+        <div class="login-sub">Enter your email and we'll send you a magic link — no password needed.</div>
+        <input class="login-input" type="email" id="login-email-input" placeholder="your@email.com" autocomplete="email">
+        <button class="login-btn" onclick="requestMagicLink()">Send Magic Link</button>
+        <div class="login-divider">a link, not a password</div>
+      </div>
+      <div class="login-success" id="login-success-wrap">
+        <div class="login-success-icon">✉️</div>
+        <div class="login-success-title">Check your inbox.</div>
+        <div class="login-success-body">We sent a magic link to <strong id="login-success-email"></strong>. The link expires in 15 minutes.</div>
+      </div>
+    </div>
+  </div>
+  <div class="login-footer">
+    <a href="https://ricorra.com/privacy">Privacy</a> · <a href="https://ricorra.com/terms">Terms</a> · <a href="mailto:hello@ricorra.com">Support</a><br>
+    <span style="margin-top:8px;display:block;">Subscriptions, self-sovereign.</span>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     MAIN APP WRAPPER (shown when authenticated)
+════════════════════════════════════════════════════ -->
+<div id="app-wrap" style="display:none;">
+
+<!-- ── TOP BAR ── -->
+<header class="topbar">
+  <div class="topbar-logo">
+    <svg class="topbar-mark" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="100" cy="100" r="96" fill="#C49A3C"/>
+      <circle cx="100" cy="100" r="88" fill="none" stroke="#D4AA52" stroke-width="1.5" opacity="0.6"/>
+      <text x="100" y="100" text-anchor="middle" dominant-baseline="central"
+        font-family="'Cormorant Garamond', Georgia, serif" font-size="148" font-weight="400"
+        fill="#FAF8F4" opacity="0.42">₿</text>
+      <text x="100" y="100" text-anchor="middle" dominant-baseline="central"
+        font-family="'Cormorant Garamond', Georgia, serif" font-size="14" font-weight="300"
+        fill="#FAF8F4" letter-spacing="10" dy="-4">ricorra</text>
+    </svg>
+    <div>
+      <div class="topbar-wordmark">ricorra</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="rate-badge" onclick="fetchRates()" title="Tap to refresh">
+      <div class="rate-dot" id="rate-dot"></div>
+      <span id="rate-label">Loading…</span>
+      <span id="rate-time" style="opacity:0.7;font-size:10px;"></span>
+    </div>
+  </div>
+</header>
+
+<!-- ════════════════════════════════════════════════════
+     SCREEN: HOME
+════════════════════════════════════════════════════ -->
+<main class="screen active" id="screen-home">
+
+  <!-- Hero -->
+  <div class="home-hero">
+    <div class="hero-watermark">₿</div>
+    <div class="hero-label" id="i18n-hero-label">Monthly Recurring Revenue</div>
+    <div class="hero-mrr" id="hero-mrr-amount">$0.00</div>
+    <div class="hero-mrr-sub" id="hero-mrr-btc">≈ 0 BTC</div>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="hero-stat-val" id="hero-subscribers">0</div>
+        <div class="hero-stat-lbl" id="i18n-hero-subscribers">Subscribers</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-val" id="hero-plans">0</div>
+        <div class="hero-stat-lbl" id="i18n-hero-plans">Active Plans</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-val" id="hero-btc-price">—</div>
+        <div class="hero-stat-lbl">BTC / USD</div>
+      </div>
+    </div>
+    <div class="hero-trend" id="hero-trend" style="display:none;"></div>
+  </div>
+
+  <!-- Quick stats grid -->
+  <div class="home-quick-stats">
+    <div class="quick-stat-card green">
+      <div class="qs-val" id="qs-arr">$0</div>
+      <div class="qs-lbl" id="i18n-qs-arr">Annual Revenue</div>
+      <div class="qs-sub" id="qs-arr-sub">run rate</div>
+    </div>
+    <div class="quick-stat-card orange">
+      <div class="qs-val" id="qs-avg">$0</div>
+      <div class="qs-lbl" id="i18n-qs-avg">Avg per Subscriber</div>
+      <div class="qs-sub" id="qs-avg-sub">per month</div>
+    </div>
+    <div class="quick-stat-card charcoal">
+      <div class="qs-val" id="qs-renewals">0</div>
+      <div class="qs-lbl" id="i18n-qs-renewals">Renewals Due</div>
+      <div class="qs-sub">next 7 days</div>
+    </div>
+    <div class="quick-stat-card">
+      <div class="qs-val" id="qs-churn">0</div>
+      <div class="qs-lbl" id="i18n-qs-churn">Cancelled</div>
+      <div class="qs-sub">all time</div>
+    </div>
+  </div>
+
+  <!-- Renewal outlook -->
+  <div id="renewal-outlook-wrap" style="display:none;">
+    <div class="header-row" style="padding-bottom:4px;padding-top:12px;">
+      <div class="section-title" style="font-size:17px;" id="i18n-renewal-outlook">Upcoming Renewals</div>
+      <button onclick="showScreen('subscribers')" style="background:none;border:none;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--amber-deep);cursor:pointer;" id="i18n-view-all">View all →</button>
+    </div>
+    <div class="renewal-card" id="renewal-list"></div>
+  </div>
+
+  <!-- Recent Activity -->
+  <div class="header-row" style="padding-bottom:6px;padding-top:14px;">
+    <div class="section-title" style="font-size:17px;" id="i18n-recent-activity">Recent Activity</div>
+    <button onclick="showScreen('history')" id="home-view-history-btn" style="display:none;background:none;border:none;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--amber-deep);cursor:pointer;">View all →</button>
+  </div>
+
+  <div id="home-activity-list" style="padding:0 16px 16px;">
+    <div class="empty-state" id="home-empty">
+      <div class="empty-icon">✦</div>
+      <div class="empty-title" id="i18n-home-empty-title">No activity yet</div>
+      <div class="empty-body" id="i18n-home-empty-body">Create your first subscription plan to get started. Your payment activity will appear here.</div>
+      <button class="primary-btn" onclick="showScreen('plans')" style="margin-top:8px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span id="i18n-create-first-plan">Create a Plan</span>
+      </button>
+    </div>
+  </div>
+
+</main>
+
+<!-- ════════════════════════════════════════════════════
+     SCREEN: PLANS
+════════════════════════════════════════════════════ -->
+<main class="screen" id="screen-plans">
+
+  <div class="header-row">
+    <div class="section-title" id="i18n-plans-title">Plans</div>
+    <button class="primary-btn" onclick="openCreatePlan()" style="padding:9px 16px;font-size:13px;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <span id="i18n-new-plan">New Plan</span>
+    </button>
+  </div>
+
+  <div id="plans-list" style="padding:0 16px 16px;">
+    <div class="empty-state" id="plans-empty">
+      <div class="empty-icon">📋</div>
+      <div class="empty-title" id="i18n-plans-empty-title">No plans yet</div>
+      <div class="empty-body" id="i18n-plans-empty-body">Create a subscription plan and share the payment link with your audience.</div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ════════════════════════════════════════════════════
+     SCREEN: SUBSCRIBERS
+════════════════════════════════════════════════════ -->
+<main class="screen" id="screen-subscribers">
+
+  <div class="header-row">
+    <div class="section-title" id="i18n-subscribers-title">Subscribers</div>
+    <div style="font-size:12px;color:var(--gray-text);" id="subscriber-count-label">0 active</div>
+  </div>
+
+  <div class="search-wrap">
+    <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input class="search-input" id="subscriber-search" type="search" placeholder="Search subscribers…" oninput="filterSubscribers(this.value)">
+  </div>
+
+  <div id="subscribers-list" style="background:var(--parchment);border-radius:var(--radius);margin:6px 16px;box-shadow:var(--shadow);overflow:hidden;">
+    <div class="empty-state" id="subscribers-empty">
+      <div class="empty-icon">👥</div>
+      <div class="empty-title" id="i18n-subscribers-empty-title">No subscribers yet</div>
+      <div class="empty-body" id="i18n-subscribers-empty-body">Share a plan link with your audience. Subscribers will appear here once they complete their first payment.</div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ════════════════════════════════════════════════════
+     SCREEN: HISTORY
+════════════════════════════════════════════════════ -->
+<main class="screen" id="screen-history">
+
+  <div class="header-row" style="padding-bottom:4px;">
+    <div class="section-title" id="i18n-hist-title">History</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+      <button class="export-btn" onclick="openCSVRangeModal('csv')" aria-label="Export CSV">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span id="i18n-hist-export-csv">Export CSV</span>
+      </button>
+      <button class="export-btn" onclick="openCSVRangeModal('koinly')" title="Koinly-compatible export for crypto taxes" aria-label="Koinly export">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <span id="i18n-hist-koinly">Koinly</span>
+      </button>
+      <button class="export-btn" onclick="clearAllHistory()" style="color:var(--red);background:var(--red-pale);" aria-label="Clear history">
+        <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        <span id="i18n-hist-clear-all">Clear All</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Period filter -->
+  <div class="period-pills">
+    <button class="period-btn active" id="period-all"   onclick="setPeriod('all')"   data-i18n="hist_all">All</button>
+    <button class="period-btn"        id="period-today" onclick="setPeriod('today')" data-i18n="hist_today">Today</button>
+    <button class="period-btn"        id="period-week"  onclick="setPeriod('week')"  data-i18n="hist_this_week">This Week</button>
+    <button class="period-btn"        id="period-month" onclick="setPeriod('month')" data-i18n="hist_this_month">This Month</button>
+    <button class="period-btn"        id="period-year"  onclick="setPeriod('year')"  data-i18n="hist_this_year">This Year</button>
+  </div>
+
+  <!-- Search -->
+  <div class="search-wrap" style="padding-top:4px;">
+    <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input class="search-input" id="history-search" type="search" placeholder="Search by plan, subscriber, amount…" oninput="renderHistory()">
+  </div>
+
+  <!-- Total bar -->
+  <div class="history-total-bar">
+    <div>
+      <div class="history-total-num" id="hist-total-num">$0.00</div>
+      <div class="history-total-label" id="i18n-hist-total-label">Total Logged</div>
+    </div>
+    <div class="history-count" id="hist-count-label"></div>
+  </div>
+
+  <!-- History list -->
+  <div id="history-list" style="background:var(--parchment);border-radius:var(--radius);margin:0 16px 12px;box-shadow:var(--shadow);overflow:hidden;">
+    <div class="empty-state" id="history-empty">
+      <div class="empty-icon">🕐</div>
+      <div class="empty-body" id="i18n-hist-empty">No payments logged yet. When subscribers pay, their payments will appear here.</div>
+    </div>
+  </div>
+
+  <!-- Koinly promo -->
+  <div class="koinly-promo">
+    <div class="koinly-promo-top">
+      <div class="koinly-promo-text">
+        <div class="koinly-promo-title" id="i18n-hist-koinly-title">Need help with crypto taxes?</div>
+        <div class="koinly-promo-sub" id="i18n-hist-koinly-sub">Connect your wallet to Koinly — automatic tax reports for crypto income.</div>
+      </div>
+      <div class="koinly-promo-icon">🧾</div>
+    </div>
+    <div class="koinly-promo-links">
+      <a href="https://koinly.io/?via=DB844F70" target="_blank" rel="noopener" id="i18n-try-koinly-link">Try Koinly →</a>
+    </div>
+  </div>
+
+</main>
+
+<!-- ════════════════════════════════════════════════════
+     SCREEN: SETTINGS
+════════════════════════════════════════════════════ -->
+<main class="screen" id="screen-settings">
+  <div style="padding:16px 16px 8px;">
+    <div class="section-title" id="i18n-settings-title">Settings</div>
+  </div>
+
+  <!-- ACCOUNT -->
+  <div style="padding:0 16px 10px;">
+    <div class="settings-section">
+      <div class="settings-label" id="i18n-section-account">Account</div>
+      <div class="settings-row">
+        <label id="i18n-label-display-name">Display Name</label>
+        <input class="settings-input" id="settings-display-name" type="text" placeholder="Your name or business">
+        <div class="settings-hint" id="i18n-hint-display-name">Shown on your public profile and subscriber emails.</div>
+      </div>
+      <div class="settings-row">
+        <label id="i18n-label-email">Email</label>
+        <input class="settings-input" id="settings-email" type="email" readonly style="opacity:0.6;cursor:default;">
+        <div class="settings-hint">Your login email. Contact support to change it.</div>
+      </div>
+    </div>
+
+    <!-- WALLET -->
+    <div class="settings-section">
+      <div class="settings-label" id="i18n-section-wallet">Bitcoin Wallet</div>
+      <div class="settings-row">
+        <label id="i18n-label-btc-wallet">Bitcoin Address (on-chain)</label>
+        <input class="settings-input" id="settings-btc-wallet" type="text" placeholder="bc1q… or 1… or 3…">
+        <div class="settings-hint" id="i18n-hint-btc-wallet">Subscriber payments go directly to this address. Never shared publicly — only encoded in payment QR codes.</div>
+      </div>
+      <div class="settings-row">
+        <label id="i18n-label-lightning-addr">⚡ Lightning Address</label>
+        <input class="settings-input" id="settings-lightning-addr" type="text" placeholder="you@wallet.com">
+        <div class="settings-hint" id="i18n-hint-lightning-addr">Enables instant Lightning Network payments. Format: name@domain.com</div>
+      </div>
+    </div>
+
+    <!-- HARDWARE WALLET -->
+    <div class="settings-section">
+      <div class="settings-label" id="i18n-section-hardware">Hardware Wallet</div>
+      <div class="settings-row">
+        <div class="tangem-card">
+          <div class="tangem-text">
+            <div class="tangem-title" id="i18n-tangem-title">Upgrade to a hardware wallet</div>
+            <div class="tangem-sub" id="i18n-tangem-sub">Tangem is a card-shaped cold wallet — your private keys never leave the chip. Use code 4TMHJK for 10% off.</div>
+          </div>
+          <button class="tangem-btn" onclick="window.open('https://tangem.com/en/pricing?promocode=4TMHJK','_blank')">Shop →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- DISPLAY -->
+    <div class="settings-section">
+      <div class="settings-label" id="i18n-section-display">Display</div>
+      <div class="settings-row">
+        <label id="i18n-label-currency">Display Currency</label>
+        <div id="currency-pills-wrap" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;"></div>
+        <div class="settings-hint" id="i18n-hint-currency">Amounts in history and exports display in this currency. Koinly export always uses USD.</div>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-label-group">
+          <div class="toggle-label" id="i18n-label-dark-mode">Dark Mode</div>
+          <div class="toggle-hint" id="i18n-hint-dark-mode">Easy on the eyes in low-light environments</div>
+        </div>
+        <label class="toggle-wrap">
+          <input type="checkbox" class="toggle-input" id="dark-mode-toggle" onchange="toggleDarkMode(this.checked)">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- LANGUAGE -->
+    <div class="settings-section">
+      <div class="settings-label" id="i18n-section-language">Language</div>
+      <div class="settings-row">
+        <label id="i18n-app-language">App Language</label>
+        <select class="settings-input" id="language-select" onchange="setLanguage(this.value)"
+          style="cursor:pointer;appearance:none;-webkit-appearance:none;
+          background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%228%22 viewBox=%220 0 12 8%22><path d=%22M1 1l5 5 5-5%22 stroke=%22%236B6860%22 stroke-width=%221.8%22 fill=%22none%22 stroke-linecap=%22round%22/></svg>');
+          background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;">
+          <option value="en">🇺🇸 English</option>
+          <option value="es">🇪🇸 Español</option>
+          <option value="fr">🇫🇷 Français</option>
+          <option value="pt">🇧🇷 Português</option>
+          <option value="zh">🇨🇳 中文</option>
+          <option value="de">🇩🇪 Deutsch</option>
+          <option value="ja">🇯🇵 日本語</option>
+          <option value="ko">🇰🇷 한국어</option>
+          <option value="hi">🇮🇳 हिन्दी</option>
+          <option value="ar">🇸🇦 العربية</option>
+          <option value="it">🇮🇹 Italiano</option>
+          <option value="nl">🇳🇱 Nederlands</option>
+          <option value="ru">🇷🇺 Русский</option>
+          <option value="af">🇿🇦 Afrikaans</option>
+          <option value="cs">🇨🇿 Čeština</option>
+          <option value="sw">🇰🇪 Kiswahili</option>
+          <option value="tr">🇹🇷 Türkçe</option>
+          <option value="uk">🇺🇦 Українська</option>
+          <option value="id">🇮🇩 Bahasa Indonesia</option>
+          <option value="pl">🇵🇱 Polski</option>
+          <option value="sv">🇸🇪 Svenska</option>
+          <option value="tl">🇵🇭 Filipino</option>
+          <option value="he">🇮🇱 עברית</option>
+          <option value="el">🇬🇷 Ελληνικά</option>
+        </select>
+        <div class="settings-hint mt-8" id="i18n-changes-apply">Changes apply instantly across the entire app.</div>
+        <div class="settings-hint" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--stone);">
+          <span id="i18n-language-cta">Don't see your language? Let us know at <a href="mailto:hello@ricorra.com" style="color:var(--amber);font-weight:600;text-decoration:none;">hello@ricorra.com</a> and we'll add it.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- NOTIFICATIONS -->
+    <div class="settings-section">
+      <div class="settings-label" id="i18n-section-notifications">Notifications</div>
+      <div class="toggle-row">
+        <div class="toggle-label-group">
+          <div class="toggle-label" id="i18n-label-weekly-digest">Weekly Digest Email</div>
+          <div class="toggle-hint" id="i18n-hint-weekly-digest">Every Monday — MRR, subscriber count, top plan, renewal outlook</div>
+        </div>
+        <label class="toggle-wrap">
+          <input type="checkbox" class="toggle-input" id="digest-toggle" onchange="saveSettings()">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="settings-row" id="digest-email-row" style="display:none;">
+        <label id="i18n-label-digest-email">Send digest to</label>
+        <input class="settings-input" id="digest-email-input" type="email" placeholder="your@email.com">
+        <div class="settings-hint" id="i18n-hint-digest-email">Defaults to your login email. Change to send to a business or accountant address.</div>
+      </div>
+    </div>
+
+    <!-- TAX -->
+    <div class="settings-section">
+      <div class="settings-label" id="i18n-section-tax">Tax</div>
+      <div class="settings-row">
+        <label id="i18n-label-tax-rate">Tax Rate (optional)</label>
+        <input class="settings-input" id="settings-tax-rate" type="number" min="0" max="100" step="0.1" placeholder="e.g. 8 for 8%">
+        <div class="settings-hint" id="i18n-hint-tax-rate">Enter your local tax rate. Ricorra will calculate the pre-tax subtotal in history and CSV exports. Leave blank to disable.</div>
+      </div>
+    </div>
+
+    <!-- TROUBLESHOOTING -->
+    <div class="settings-section">
+      <div class="settings-label" id="i18n-section-trouble">Troubleshooting</div>
+      <div class="faq-item">
+        <div class="faq-question" onclick="toggleFaq(this)">Rates won't load <span class="faq-chevron">▼</span></div>
+        <div class="faq-answer">Check your internet connection and try refreshing the page. Tap the amber rate badge at the top of the app to manually refresh.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-question" onclick="toggleFaq(this)">A subscriber says their payment didn't go through <span class="faq-chevron">▼</span></div>
+        <div class="faq-answer">Bitcoin payments can take a few minutes to confirm on the blockchain. Ask the subscriber to check their wallet app for a pending transaction. Do not mark a payment as received until it confirms.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-question" onclick="toggleFaq(this)">I can't log in <span class="faq-chevron">▼</span></div>
+        <div class="faq-answer">Request a new magic link by entering your email on the login screen. Check your spam folder if it doesn't arrive within a minute. Magic links expire after 15 minutes.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-question" onclick="toggleFaq(this)">How do I issue a refund? <span class="faq-chevron">▼</span></div>
+        <div class="faq-answer">Bitcoin payments cannot be reversed once confirmed on the blockchain. To refund a subscriber, you must send Bitcoin back to their wallet address manually. Make sure your refund policy is communicated before they subscribe.</div>
+      </div>
+      <div class="settings-row" style="border-top:1px solid var(--stone);">
+        <a href="https://ricorra.com/help" target="_blank" style="font-size:13px;color:var(--amber-deep);font-weight:600;text-decoration:none;">More help at ricorra.com →</a>
+      </div>
+    </div>
+
+    <!-- DATA -->
+    <div class="settings-section">
+      <div class="settings-label" id="i18n-section-data">Data</div>
+      <div class="settings-row">
+        <div class="settings-hint" id="i18n-hint-data">Payment history is synced across your devices and saved locally. Export a CSV backup from the History tab before clearing.</div>
+      </div>
+      <div class="settings-row">
+        <button onclick="clearAllHistory()" style="background:var(--red-pale);color:var(--red);border:none;border-radius:10px;padding:10px 16px;font-family:var(--font-ui);font-size:13px;font-weight:600;cursor:pointer;width:100%;" id="i18n-btn-clear-history">Clear Payment History</button>
+      </div>
+    </div>
+
+    <!-- ACCOUNT / LOGOUT -->
+    <div class="settings-section">
+      <div class="settings-label" id="i18n-section-account-logout">Account</div>
+      <div class="settings-row">
+        <div class="settings-hint" id="i18n-account-signout-desc">Sign out of Ricorra on this device. You can log back in anytime with your email.</div>
+      </div>
+      <div class="settings-row">
+        <button onclick="logout()" style="background:var(--warm-white);color:var(--charcoal);border:1.5px solid var(--stone);border-radius:10px;padding:10px 16px;font-family:var(--font-ui);font-size:13px;font-weight:600;cursor:pointer;width:100%;margin-bottom:8px;" id="i18n-btn-logout">Log Out</button>
+        <button onclick="logoutAndClear()" style="background:none;color:var(--gray-text);border:none;font-family:var(--font-ui);font-size:12px;cursor:pointer;width:100%;padding:6px;">Clear local data &amp; sign out</button>
+      </div>
+    </div>
+
+    <!-- ABOUT FOOTER -->
+    <div class="about-footer">
+      <strong style="font-family:var(--font-display);font-size:15px;letter-spacing:0.06em;">ricorra</strong><br>
+      Subscriptions, self-sovereign.<br>
+      <span id="i18n-about-footer-beta">Ricorra v1.0 Beta · Built for creators & merchants</span><br>
+      <span id="i18n-about-footer-affil">Not affiliated with any cryptocurrency foundation</span><br>
+      <a href="https://ricorra.com/privacy">Privacy</a> · <a href="https://ricorra.com/terms">Terms</a> · <a href="mailto:hello@ricorra.com">Support</a>
+    </div>
+
+    <div style="height:8px;"></div>
+
+    <div style="padding:0 16px 16px;">
+      <button class="save-btn" onclick="saveSettings()" id="i18n-save-settings">Save Settings</button>
+    </div>
+  </div>
+</main>
+
+<!-- ════════════════════════════════════════════════════
+     BOTTOM NAV
+════════════════════════════════════════════════════ -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" id="nav-home" onclick="showScreen('home')">
+    <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    <span id="i18n-nav-home">Home</span>
+  </button>
+  <button class="nav-btn" id="nav-plans" onclick="showScreen('plans')">
+    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    <span id="i18n-nav-plans">Plans</span>
+  </button>
+  <button class="nav-btn" id="nav-subscribers" onclick="showScreen('subscribers')">
+    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    <span id="i18n-nav-subscribers">Subscribers</span>
+  </button>
+  <button class="nav-btn" id="nav-history" onclick="showScreen('history')">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    <span id="i18n-nav-history">History</span>
+  </button>
+  <button class="nav-btn" id="nav-settings" onclick="showScreen('settings')">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    <span id="i18n-nav-settings">Settings</span>
+  </button>
+</nav>
+
+</div><!-- /app-wrap -->
+
+<!-- ════════════════════════════════════════════════════
+     MODAL: CREATE / EDIT PLAN
+════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="plan-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="plan-modal-title">New Plan</div>
+    <div class="modal-sub" id="plan-modal-sub">Define your subscription — name, price, and billing interval.</div>
+    <input type="hidden" id="plan-modal-id">
+    <div class="form-group">
+      <label class="form-label" id="i18n-form-plan-name">Plan Name</label>
+      <input class="form-input" id="plan-name-input" type="text" placeholder="e.g. Monthly Newsletter, Annual Access">
+    </div>
+    <div class="form-group">
+      <label class="form-label" id="i18n-form-plan-price">Price (USD)</label>
+      <div class="input-prefix-group">
+        <span class="input-prefix">$</span>
+        <input class="form-input" id="plan-price-input" type="number" min="0.01" step="0.01" placeholder="9.00" style="padding-left:28px;">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" id="i18n-form-plan-interval">Billing Interval</label>
+      <div class="interval-pills">
+        <div class="interval-pill active" id="interval-monthly" onclick="selectInterval('monthly')">Monthly</div>
+        <div class="interval-pill" id="interval-annual" onclick="selectInterval('annual')">Annual</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" id="i18n-form-plan-desc">Description (optional)</label>
+      <input class="form-input" id="plan-desc-input" type="text" placeholder="What's included in this plan?">
+    </div>
+    <button class="save-btn" onclick="savePlan()" id="i18n-btn-save-plan" style="margin-top:8px;">Save Plan</button>
+    <button onclick="closePlanModal()" style="width:100%;background:none;border:none;color:var(--gray-text);font-family:var(--font-ui);font-size:14px;cursor:pointer;padding:12px;margin-top:4px;" id="i18n-btn-cancel">Cancel</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     MODAL: SUBSCRIBER DETAIL
+════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="subscriber-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="sub-detail-header">
+      <div class="sub-detail-avatar" id="sub-modal-avatar">?</div>
+      <div class="sub-detail-info">
+        <div class="sub-detail-email" id="sub-modal-email">subscriber@email.com</div>
+        <div class="sub-detail-plan" id="sub-modal-plan">Plan name · Monthly</div>
+      </div>
+    </div>
+    <!-- Payment history for this subscriber will be rendered here -->
+    <div id="sub-modal-history"></div>
+    <button onclick="closeSubscriberModal()" style="width:100%;background:none;border:1.5px solid var(--stone);color:var(--gray-text);font-family:var(--font-ui);font-size:14px;font-weight:600;cursor:pointer;padding:12px;border-radius:50px;margin-top:8px;">Close</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     MODAL: CSV DATE RANGE
+════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="csv-range-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="i18n-csv-title">Export CSV</div>
+    <div class="modal-sub">Choose a date range or export everything.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+      <div>
+        <label class="form-label">From</label>
+        <input type="date" id="csv-range-from" class="form-input">
+      </div>
+      <div>
+        <label class="form-label">To</label>
+        <input type="date" id="csv-range-to" class="form-input">
+      </div>
+    </div>
+    <button onclick="confirmCSVExport()" class="save-btn" style="margin-bottom:8px;" id="i18n-btn-export-range">Export Date Range</button>
+    <button onclick="confirmCSVExport(true)" class="save-btn" style="background:var(--charcoal);margin-bottom:8px;" id="i18n-btn-export-all">Export All Time</button>
+    <button onclick="closeCSVRangeModal()" style="width:100%;background:none;border:none;color:var(--gray-text);font-family:var(--font-ui);font-size:14px;cursor:pointer;padding:10px;">Cancel</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     TOAST
+════════════════════════════════════════════════════ -->
+<div class="toast" id="toast"></div>
+
+<!-- ════════════════════════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════════════════════════ -->
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════
+const STORAGE_KEY    = 'ricorra_settings_v1';
+const PAYMENTS_KEY   = 'ricorra_payments_v1';
+const PLANS_KEY      = 'ricorra_plans_v1';
+const SUBSCRIBERS_KEY= 'ricorra_subscribers_v1';
+const SESSION_KEY    = 'ricorra_session_token';
+const API_BASE       = 'https://ricorra.io';
+
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+let settings = {
+  displayName:    '',
+  email:          '',
+  btcWallet:      '',
+  lightningAddr:  '',
+  currency:       'USD',
+  language:       'en',
+  darkMode:       false,
+  taxRate:        '',
+  digestEnabled:  false,
+  digestEmail:    '',
+};
+let plans       = [];   // [{ id, name, priceUSD, interval, desc, status, createdAt, shareToken }]
+let subscribers = [];   // [{ id, email, planId, status, nextRenewal, payments[] }]
+let payments    = [];   // [{ id, subscriberId, planId, usd, btcAmount, coin, timestamp, note }]
+
+let btcRate         = 0;
+let fiatRate        = 1;
+let lastRateTs      = null;
+let activePeriod    = 'all';
+let csvExportType   = 'csv';
+let selectedInterval = 'monthly';
+
+// ═══════════════════════════════════════════════════════
+// TRANSLATIONS  (24 languages — Ricorra-specific strings
+// in English; shared strings from OrangeTill ported)
+// ═══════════════════════════════════════════════════════
+const T = {
+  en: {
+    nav_home:        'Home',
+    nav_plans:       'Plans',
+    nav_subscribers: 'Subscribers',
+    nav_history:     'History',
+    nav_settings:    'Settings',
+    hero_label:      'Monthly Recurring Revenue',
+    hero_subscribers:'Subscribers',
+    hero_plans:      'Active Plans',
+    recent_activity: 'Recent Activity',
+    home_empty_title:'No activity yet',
+    home_empty_body: 'Create your first subscription plan to get started.',
+    create_first_plan:'Create a Plan',
+    plans_title:     'Plans',
+    new_plan:        'New Plan',
+    plans_empty_title:'No plans yet',
+    plans_empty_body: 'Create a subscription plan and share the payment link with your audience.',
+    subscribers_title:'Subscribers',
+    subscribers_empty_title:'No subscribers yet',
+    subscribers_empty_body: 'Share a plan link with your audience. Subscribers will appear here once they complete their first payment.',
+    hist_title:      'History',
+    hist_export_csv: 'Export CSV',
+    hist_koinly:     'Koinly',
+    hist_clear_all:  'Clear All',
+    hist_all:        'All',
+    hist_today:      'Today',
+    hist_this_week:  'This Week',
+    hist_this_month: 'This Month',
+    hist_this_year:  'This Year',
+    hist_total_logged:'Total Logged',
+    hist_empty:      'No payments logged yet. When subscribers pay, their payments will appear here.',
+    hist_koinly_title:'Need help with crypto taxes?',
+    hist_koinly_sub: 'Connect your wallet to Koinly — automatic tax reports for crypto income.',
+    settings_title:  'Settings',
+    save_settings:   'Save Settings',
+    section_account: 'Account',
+    section_wallet:  'Bitcoin Wallet',
+    section_hardware:'Hardware Wallet',
+    section_display: 'Display',
+    section_language:'Language',
+    section_notifications:'Notifications',
+    section_tax:     'Tax',
+    section_trouble: 'Troubleshooting',
+    section_data:    'Data',
+    label_display_name:'Display Name',
+    hint_display_name: 'Shown on your public profile and subscriber emails.',
+    label_btc_wallet:  'Bitcoin Address (on-chain)',
+    hint_btc_wallet:   'Subscriber payments go directly to this address.',
+    label_lightning_addr:'⚡ Lightning Address',
+    hint_lightning_addr: 'Enables instant Lightning Network payments. Format: name@domain.com',
+    label_currency:  'Display Currency',
+    hint_currency:   'Amounts in history and exports display in this currency. Koinly export always uses USD.',
+    label_dark_mode: 'Dark Mode',
+    hint_dark_mode:  'Easy on the eyes in low-light environments',
+    app_language:    'App Language',
+    changes_apply:   'Changes apply instantly across the entire app.',
+    language_cta:    'Don\'t see your language? Let us know at hello@ricorra.com and we\'ll add it.',
+    label_weekly_digest: 'Weekly Digest Email',
+    hint_weekly_digest:  'Every Monday — MRR, subscriber count, top plan, renewal outlook',
+    label_digest_email:  'Send digest to',
+    hint_digest_email:   'Defaults to your login email. Change to send to a business or accountant address.',
+    label_tax_rate:  'Tax Rate (optional)',
+    hint_tax_rate:   'Enter your local tax rate. Ricorra will calculate the pre-tax subtotal. Leave blank to disable.',
+    hint_data:       'Payment history is synced across your devices and saved locally. Export a CSV backup from the History tab before clearing.',
+    btn_clear_history:'Clear Payment History',
+    btn_logout:      'Log Out',
+    account_signout_desc:'Sign out of Ricorra on this device. You can log back in anytime with your email.',
+    tangem_title:    'Upgrade to a hardware wallet',
+    tangem_sub:      'Tangem is a card-shaped cold wallet — your private keys never leave the chip. Use code 4TMHJK for 10% off.',
+    about_footer_beta: 'Ricorra v1.0 Beta · Built for creators & merchants',
+    about_footer_affil:'Not affiliated with any cryptocurrency foundation',
+    form_plan_name:  'Plan Name',
+    form_plan_price: 'Price (USD)',
+    form_plan_interval:'Billing Interval',
+    form_plan_desc:  'Description (optional)',
+    btn_save_plan:   'Save Plan',
+    btn_cancel:      'Cancel',
+    csv_title:       'Export CSV',
+    btn_export_range:'Export Date Range',
+    btn_export_all:  'Export All Time',
+    toast_settings_saved: '✓ Settings saved',
+    toast_plan_saved:     '✓ Plan saved',
+    toast_plan_deleted:   'Plan deleted',
+    toast_no_payments:    'No payments to export',
+    toast_copied:         'Link copied!',
+    toast_history_cleared:'History cleared',
+    toast_back_online:    'Back online — refreshing rates…',
+    badge_active:    'Active',
+    badge_paused:    'Paused',
+    badge_archived:  'Archived',
+    plan_monthly:    'monthly',
+    plan_annual:     'annual',
+    plan_subscribers:'subscribers',
+    plan_share:      'Share',
+    plan_edit:       'Edit',
+    plan_pause:      'Pause',
+    plan_resume:     'Resume',
+    plan_delete:     'Delete',
+  },
+  es: {
+    nav_home:'Inicio', nav_plans:'Planes', nav_subscribers:'Suscriptores', nav_history:'Historial', nav_settings:'Ajustes',
+    hero_label:'Ingresos Recurrentes Mensuales', hero_subscribers:'Suscriptores', hero_plans:'Planes Activos',
+    recent_activity:'Actividad Reciente', home_empty_title:'Sin actividad aún', home_empty_body:'Crea tu primer plan de suscripción para comenzar.',
+    create_first_plan:'Crear un Plan', plans_title:'Planes', new_plan:'Nuevo Plan',
+    plans_empty_title:'Sin planes aún', plans_empty_body:'Crea un plan de suscripción y comparte el enlace con tu audiencia.',
+    subscribers_title:'Suscriptores', subscribers_empty_title:'Sin suscriptores aún', subscribers_empty_body:'Comparte un enlace de plan con tu audiencia.',
+    hist_title:'Historial', hist_export_csv:'Exportar CSV', hist_koinly:'Koinly', hist_clear_all:'Borrar todo',
+    hist_all:'Todos', hist_today:'Hoy', hist_this_week:'Esta semana', hist_this_month:'Este mes', hist_this_year:'Este año',
+    hist_total_logged:'Total registrado', hist_empty:'Aún no hay pagos.',
+    hist_koinly_title:'¿Necesitas ayuda con impuestos cripto?', hist_koinly_sub:'Conecta tu billetera a Koinly.',
+    settings_title:'Ajustes', save_settings:'Guardar ajustes', section_account:'Cuenta', section_wallet:'Billetera Bitcoin',
+    section_hardware:'Billetera de Hardware', section_display:'Pantalla', section_language:'Idioma',
+    section_notifications:'Notificaciones', section_tax:'Impuestos', section_trouble:'Solución de problemas',
+    section_data:'Datos', label_dark_mode:'Modo oscuro', hint_dark_mode:'Fácil para los ojos en entornos de poca luz',
+    app_language:'Idioma de la app', changes_apply:'Los cambios se aplican al instante.',
+    btn_logout:'Cerrar sesión', account_signout_desc:'Cerrar sesión de Ricorra en este dispositivo.',
+    form_plan_name:'Nombre del plan', form_plan_price:'Precio (USD)', form_plan_interval:'Intervalo de facturación',
+    form_plan_desc:'Descripción (opcional)', btn_save_plan:'Guardar plan', btn_cancel:'Cancelar',
+    toast_settings_saved:'✓ Ajustes guardados', toast_plan_saved:'✓ Plan guardado', toast_plan_deleted:'Plan eliminado',
+    toast_no_payments:'No hay pagos para exportar', toast_copied:'¡Enlace copiado!', toast_history_cleared:'Historial borrado',
+    badge_active:'Activo', badge_paused:'Pausado', badge_archived:'Archivado',
+    plan_monthly:'mensual', plan_annual:'anual', plan_subscribers:'suscriptores',
+    plan_share:'Compartir', plan_edit:'Editar', plan_pause:'Pausar', plan_resume:'Reanudar', plan_delete:'Eliminar',
+    btn_export_range:'Exportar rango', btn_export_all:'Exportar todo',
+  },
+  fr: {
+    nav_home:'Accueil', nav_plans:'Plans', nav_subscribers:'Abonnés', nav_history:'Historique', nav_settings:'Réglages',
+    hero_label:'Revenus Récurrents Mensuels', hero_subscribers:'Abonnés', hero_plans:'Plans Actifs',
+    recent_activity:'Activité Récente', home_empty_title:'Aucune activité', home_empty_body:'Créez votre premier plan d\'abonnement pour commencer.',
+    create_first_plan:'Créer un Plan', plans_title:'Plans', new_plan:'Nouveau Plan',
+    plans_empty_title:'Aucun plan', plans_empty_body:'Créez un plan et partagez le lien avec votre audience.',
+    subscribers_title:'Abonnés', subscribers_empty_title:'Aucun abonné', subscribers_empty_body:'Partagez un lien de plan avec votre audience.',
+    hist_title:'Historique', hist_export_csv:'Exporter CSV', hist_koinly:'Koinly', hist_clear_all:'Tout effacer',
+    hist_all:'Tout', hist_today:'Aujourd\'hui', hist_this_week:'Cette semaine', hist_this_month:'Ce mois', hist_this_year:'Cette année',
+    hist_total_logged:'Total enregistré', hist_empty:'Aucun paiement enregistré.',
+    hist_koinly_title:'Besoin d\'aide pour les impôts crypto?', hist_koinly_sub:'Connectez votre portefeuille à Koinly.',
+    settings_title:'Réglages', save_settings:'Enregistrer', section_account:'Compte', section_wallet:'Portefeuille Bitcoin',
+    section_hardware:'Portefeuille matériel', section_display:'Affichage', section_language:'Langue',
+    section_notifications:'Notifications', section_tax:'Taxes', section_trouble:'Dépannage', section_data:'Données',
+    label_dark_mode:'Mode sombre', hint_dark_mode:'Reposant pour les yeux en faible luminosité',
+    app_language:'Langue de l\'app', changes_apply:'Les changements s\'appliquent instantanément.',
+    btn_logout:'Se déconnecter', account_signout_desc:'Se déconnecter de Ricorra sur cet appareil.',
+    form_plan_name:'Nom du plan', form_plan_price:'Prix (USD)', form_plan_interval:'Intervalle de facturation',
+    form_plan_desc:'Description (optionnel)', btn_save_plan:'Enregistrer le plan', btn_cancel:'Annuler',
+    toast_settings_saved:'✓ Réglages enregistrés', toast_plan_saved:'✓ Plan enregistré', toast_plan_deleted:'Plan supprimé',
+    toast_no_payments:'Aucun paiement à exporter', toast_copied:'Lien copié!', toast_history_cleared:'Historique effacé',
+    badge_active:'Actif', badge_paused:'Pausé', badge_archived:'Archivé',
+    plan_monthly:'mensuel', plan_annual:'annuel', plan_subscribers:'abonnés',
+    plan_share:'Partager', plan_edit:'Modifier', plan_pause:'Pausé', plan_resume:'Reprendre', plan_delete:'Supprimer',
+    btn_export_range:'Exporter la plage', btn_export_all:'Tout exporter',
+  },
+  pt: {
+    nav_home:'Início', nav_plans:'Planos', nav_subscribers:'Assinantes', nav_history:'Histórico', nav_settings:'Configurações',
+    hero_label:'Receita Recorrente Mensal', hero_subscribers:'Assinantes', hero_plans:'Planos Ativos',
+    recent_activity:'Atividade Recente', home_empty_title:'Sem atividade ainda', create_first_plan:'Criar Plano',
+    plans_title:'Planos', new_plan:'Novo Plano', subscribers_title:'Assinantes',
+    hist_title:'Histórico', hist_export_csv:'Exportar CSV', hist_koinly:'Koinly', hist_clear_all:'Limpar tudo',
+    hist_all:'Tudo', hist_today:'Hoje', hist_this_week:'Esta semana', hist_this_month:'Este mês', hist_this_year:'Este ano',
+    hist_total_logged:'Total registrado', hist_empty:'Nenhum pagamento registrado ainda.',
+    settings_title:'Configurações', save_settings:'Salvar configurações', btn_logout:'Sair',
+    label_dark_mode:'Modo escuro', hint_dark_mode:'Mais confortável em ambientes com pouca luz',
+    app_language:'Idioma do app', changes_apply:'As alterações são aplicadas instantaneamente.',
+    form_plan_name:'Nome do plano', form_plan_price:'Preço (USD)', btn_save_plan:'Salvar plano', btn_cancel:'Cancelar',
+    badge_active:'Ativo', badge_paused:'Pausado', badge_archived:'Arquivado',
+    plan_monthly:'mensal', plan_annual:'anual', plan_share:'Compartilhar', plan_edit:'Editar', plan_delete:'Excluir',
+    btn_export_range:'Exportar intervalo', btn_export_all:'Exportar tudo',
+    toast_settings_saved:'✓ Configurações salvas', toast_plan_saved:'✓ Plano salvo', toast_copied:'Link copiado!',
+  },
+  zh: {
+    nav_home:'主页', nav_plans:'计划', nav_subscribers:'订阅者', nav_history:'记录', nav_settings:'设置',
+    hero_label:'月度经常性收入', hero_subscribers:'订阅者', hero_plans:'活跃计划',
+    recent_activity:'最近活动', home_empty_title:'暂无活动', create_first_plan:'创建计划',
+    plans_title:'计划', new_plan:'新计划', subscribers_title:'订阅者',
+    hist_title:'记录', hist_export_csv:'导出CSV', hist_koinly:'Koinly', hist_clear_all:'清除全部',
+    hist_all:'全部', hist_today:'今天', hist_this_week:'本周', hist_this_month:'本月', hist_this_year:'今年',
+    hist_total_logged:'总计', hist_empty:'暂无付款记录。',
+    settings_title:'设置', save_settings:'保存设置', btn_logout:'退出登录',
+    label_dark_mode:'深色模式', app_language:'应用语言', changes_apply:'更改立即生效。',
+    form_plan_name:'计划名称', form_plan_price:'价格（USD）', btn_save_plan:'保存计划', btn_cancel:'取消',
+    badge_active:'活跃', badge_paused:'暂停', plan_monthly:'每月', plan_annual:'每年',
+    plan_share:'分享', plan_edit:'编辑', plan_delete:'删除', btn_export_all:'导出全部',
+    toast_settings_saved:'✓ 设置已保存', toast_plan_saved:'✓ 计划已保存', toast_copied:'链接已复制！',
+  },
+  de: {
+    nav_home:'Startseite', nav_plans:'Pläne', nav_subscribers:'Abonnenten', nav_history:'Verlauf', nav_settings:'Einstellungen',
+    hero_label:'Monatlich wiederkehrende Einnahmen', hero_subscribers:'Abonnenten', hero_plans:'Aktive Pläne',
+    recent_activity:'Letzte Aktivität', home_empty_title:'Keine Aktivität', create_first_plan:'Plan erstellen',
+    plans_title:'Pläne', new_plan:'Neuer Plan', subscribers_title:'Abonnenten',
+    hist_title:'Verlauf', hist_export_csv:'CSV exportieren', hist_koinly:'Koinly', hist_clear_all:'Alles löschen',
+    hist_all:'Alle', hist_today:'Heute', hist_this_week:'Diese Woche', hist_this_month:'Diesen Monat', hist_this_year:'Dieses Jahr',
+    hist_total_logged:'Gesamt', hist_empty:'Noch keine Zahlungen.',
+    settings_title:'Einstellungen', save_settings:'Einstellungen speichern', btn_logout:'Abmelden',
+    label_dark_mode:'Dunkelmodus', hint_dark_mode:'Augenschonend bei wenig Licht',
+    app_language:'App-Sprache', changes_apply:'Änderungen werden sofort übernommen.',
+    form_plan_name:'Planname', form_plan_price:'Preis (USD)', btn_save_plan:'Plan speichern', btn_cancel:'Abbrechen',
+    badge_active:'Aktiv', badge_paused:'Pausiert', badge_archived:'Archiviert',
+    plan_monthly:'monatlich', plan_annual:'jährlich', plan_share:'Teilen', plan_edit:'Bearbeiten', plan_delete:'Löschen',
+    btn_export_range:'Bereich exportieren', btn_export_all:'Alles exportieren',
+    toast_settings_saved:'✓ Gespeichert', toast_plan_saved:'✓ Plan gespeichert', toast_copied:'Link kopiert!',
+  },
+  ja: {
+    nav_home:'ホーム', nav_plans:'プラン', nav_subscribers:'登録者', nav_history:'履歴', nav_settings:'設定',
+    hero_label:'月次定期収益', hero_subscribers:'登録者', hero_plans:'アクティブプラン',
+    recent_activity:'最近の活動', home_empty_title:'まだ活動なし', create_first_plan:'プランを作成',
+    plans_title:'プラン', new_plan:'新しいプラン', subscribers_title:'登録者',
+    hist_title:'履歴', hist_export_csv:'CSVエクスポート', hist_koinly:'Koinly', hist_clear_all:'全て削除',
+    hist_all:'全て', hist_today:'今日', hist_this_week:'今週', hist_this_month:'今月', hist_this_year:'今年',
+    hist_total_logged:'合計', hist_empty:'まだ支払いが記録されていません。',
+    settings_title:'設定', save_settings:'設定を保存', btn_logout:'ログアウト',
+    label_dark_mode:'ダークモード', app_language:'言語', changes_apply:'変更は即座に適用されます。',
+    form_plan_name:'プラン名', form_plan_price:'価格 (USD)', btn_save_plan:'プランを保存', btn_cancel:'キャンセル',
+    badge_active:'アクティブ', badge_paused:'一時停止', plan_monthly:'毎月', plan_annual:'毎年',
+    plan_share:'共有', plan_edit:'編集', plan_delete:'削除', btn_export_all:'全てエクスポート',
+    toast_settings_saved:'✓ 設定を保存しました', toast_plan_saved:'✓ プランを保存しました', toast_copied:'リンクをコピーしました！',
+  },
+  ko: {
+    nav_home:'홈', nav_plans:'플랜', nav_subscribers:'구독자', nav_history:'내역', nav_settings:'설정',
+    hero_label:'월별 반복 수익', hero_subscribers:'구독자', hero_plans:'활성 플랜',
+    recent_activity:'최근 활동', home_empty_title:'활동 없음', create_first_plan:'플랜 만들기',
+    plans_title:'플랜', new_plan:'새 플랜', subscribers_title:'구독자',
+    hist_title:'내역', hist_export_csv:'CSV 내보내기', hist_clear_all:'모두 삭제',
+    hist_all:'전체', hist_today:'오늘', hist_this_week:'이번 주', hist_this_month:'이번 달', hist_this_year:'올해',
+    hist_total_logged:'총계', settings_title:'설정', save_settings:'설정 저장', btn_logout:'로그아웃',
+    label_dark_mode:'다크 모드', app_language:'앱 언어', changes_apply:'변경 사항이 즉시 적용됩니다.',
+    form_plan_name:'플랜 이름', form_plan_price:'가격 (USD)', btn_save_plan:'플랜 저장', btn_cancel:'취소',
+    badge_active:'활성', badge_paused:'일시 중지', plan_monthly:'월별', plan_annual:'연간',
+    toast_settings_saved:'✓ 설정이 저장되었습니다', toast_plan_saved:'✓ 플랜이 저장되었습니다',
+  },
+  hi: {
+    nav_home:'होम', nav_plans:'प्लान', nav_subscribers:'सब्सक्राइबर', nav_history:'इतिहास', nav_settings:'सेटिंग्स',
+    hero_label:'मासिक आवर्ती आय', hero_subscribers:'सब्सक्राइबर', hero_plans:'सक्रिय प्लान',
+    recent_activity:'हाल की गतिविधि', home_empty_title:'अभी कोई गतिविधि नहीं', create_first_plan:'प्लान बनाएं',
+    plans_title:'प्लान', new_plan:'नया प्लान', subscribers_title:'सब्सक्राइबर',
+    hist_title:'इतिहास', hist_export_csv:'CSV निर्यात', hist_clear_all:'सब मिटाएं',
+    hist_all:'सब', hist_today:'आज', hist_this_week:'इस सप्ताह', hist_this_month:'इस महीने', hist_this_year:'इस साल',
+    settings_title:'सेटिंग्स', save_settings:'सेटिंग्स सहेजें', btn_logout:'लॉग आउट',
+    label_dark_mode:'डार्क मोड', app_language:'ऐप भाषा', changes_apply:'परिवर्तन तुरंत लागू होते हैं।',
+    form_plan_name:'प्लान नाम', btn_save_plan:'प्लान सहेजें', btn_cancel:'रद्द करें',
+    badge_active:'सक्रिय', plan_monthly:'मासिक', plan_annual:'वार्षिक',
+    toast_settings_saved:'✓ सेटिंग्स सहेजी गईं',
+  },
+  ar: {
+    nav_home:'الرئيسية', nav_plans:'الخطط', nav_subscribers:'المشتركون', nav_history:'السجل', nav_settings:'الإعدادات',
+    hero_label:'الإيرادات الشهرية المتكررة', hero_subscribers:'المشتركون', hero_plans:'الخطط النشطة',
+    recent_activity:'النشاط الأخير', home_empty_title:'لا يوجد نشاط بعد', create_first_plan:'إنشاء خطة',
+    plans_title:'الخطط', new_plan:'خطة جديدة', subscribers_title:'المشتركون',
+    hist_title:'السجل', hist_export_csv:'تصدير CSV', hist_clear_all:'مسح الكل',
+    hist_all:'الكل', hist_today:'اليوم', hist_this_week:'هذا الأسبوع', hist_this_month:'هذا الشهر', hist_this_year:'هذا العام',
+    settings_title:'الإعدادات', save_settings:'حفظ الإعدادات', btn_logout:'تسجيل الخروج',
+    label_dark_mode:'الوضع الداكن', app_language:'لغة التطبيق',
+    form_plan_name:'اسم الخطة', btn_save_plan:'حفظ الخطة', btn_cancel:'إلغاء',
+    badge_active:'نشط', plan_monthly:'شهري', plan_annual:'سنوي',
+    toast_settings_saved:'✓ تم حفظ الإعدادات',
+  },
+  it: {
+    nav_home:'Home', nav_plans:'Piani', nav_subscribers:'Abbonati', nav_history:'Cronologia', nav_settings:'Impostazioni',
+    hero_label:'Entrate Ricorrenti Mensili', hero_subscribers:'Abbonati', hero_plans:'Piani Attivi',
+    recent_activity:'Attività Recente', home_empty_title:'Nessuna attività', create_first_plan:'Crea un Piano',
+    plans_title:'Piani', new_plan:'Nuovo Piano', subscribers_title:'Abbonati',
+    hist_title:'Cronologia', hist_export_csv:'Esporta CSV', hist_koinly:'Koinly', hist_clear_all:'Cancella tutto',
+    hist_all:'Tutto', hist_today:'Oggi', hist_this_week:'Questa settimana', hist_this_month:'Questo mese', hist_this_year:'Quest\'anno',
+    hist_total_logged:'Totale registrato', settings_title:'Impostazioni', save_settings:'Salva impostazioni', btn_logout:'Disconnetti',
+    label_dark_mode:'Modalità scura', app_language:'Lingua app', changes_apply:'Le modifiche si applicano immediatamente.',
+    form_plan_name:'Nome piano', form_plan_price:'Prezzo (USD)', btn_save_plan:'Salva piano', btn_cancel:'Annulla',
+    badge_active:'Attivo', badge_paused:'In pausa', plan_monthly:'mensile', plan_annual:'annuale',
+    plan_share:'Condividi', plan_edit:'Modifica', plan_delete:'Elimina',
+    toast_settings_saved:'✓ Impostazioni salvate', toast_plan_saved:'✓ Piano salvato', toast_copied:'Link copiato!',
+  },
+  nl: {
+    nav_home:'Home', nav_plans:'Plannen', nav_subscribers:'Abonnees', nav_history:'Geschiedenis', nav_settings:'Instellingen',
+    hero_label:'Maandelijkse Terugkerende Inkomsten', hero_subscribers:'Abonnees', hero_plans:'Actieve Plannen',
+    recent_activity:'Recente Activiteit', home_empty_title:'Nog geen activiteit', create_first_plan:'Maak een Plan',
+    plans_title:'Plannen', new_plan:'Nieuw Plan', subscribers_title:'Abonnees',
+    hist_title:'Geschiedenis', hist_export_csv:'CSV exporteren', hist_clear_all:'Alles wissen',
+    hist_all:'Alles', hist_today:'Vandaag', hist_this_week:'Deze week', hist_this_month:'Deze maand', hist_this_year:'Dit jaar',
+    settings_title:'Instellingen', save_settings:'Instellingen opslaan', btn_logout:'Uitloggen',
+    label_dark_mode:'Donkere modus', app_language:'App-taal', changes_apply:'Wijzigingen worden direct toegepast.',
+    form_plan_name:'Plannaam', btn_save_plan:'Plan opslaan', btn_cancel:'Annuleren',
+    badge_active:'Actief', plan_monthly:'maandelijks', plan_annual:'jaarlijks',
+    toast_settings_saved:'✓ Instellingen opgeslagen',
+  },
+  ru: {
+    nav_home:'Главная', nav_plans:'Планы', nav_subscribers:'Подписчики', nav_history:'История', nav_settings:'Настройки',
+    hero_label:'Ежемесячный доход', hero_subscribers:'Подписчики', hero_plans:'Активные планы',
+    recent_activity:'Последняя активность', home_empty_title:'Нет активности', create_first_plan:'Создать план',
+    plans_title:'Планы', new_plan:'Новый план', subscribers_title:'Подписчики',
+    hist_title:'История', hist_export_csv:'Экспорт CSV', hist_clear_all:'Очистить всё',
+    hist_all:'Все', hist_today:'Сегодня', hist_this_week:'Эта неделя', hist_this_month:'Этот месяц', hist_this_year:'Этот год',
+    settings_title:'Настройки', save_settings:'Сохранить настройки', btn_logout:'Выйти',
+    label_dark_mode:'Тёмный режим', app_language:'Язык приложения', changes_apply:'Изменения применяются сразу.',
+    form_plan_name:'Название плана', btn_save_plan:'Сохранить план', btn_cancel:'Отмена',
+    badge_active:'Активный', plan_monthly:'ежемесячно', plan_annual:'ежегодно',
+    toast_settings_saved:'✓ Настройки сохранены',
+  },
+  af: {
+    nav_home:'Tuis', nav_plans:'Planne', nav_subscribers:'Intekenaars', nav_history:'Geskiedenis', nav_settings:'Instellings',
+    hero_label:'Maandelikse Herhalende Inkomste', plans_title:'Planne', new_plan:'Nuwe Plan',
+    hist_title:'Geskiedenis', hist_all:'Alles', hist_today:'Vandag', settings_title:'Instellings',
+    save_settings:'Stoor instellings', btn_logout:'Teken uit', label_dark_mode:'Donker modus',
+    app_language:'App-taal', form_plan_name:'Plannaam', btn_save_plan:'Stoor plan', btn_cancel:'Kanselleer',
+  },
+  cs: {
+    nav_home:'Domů', nav_plans:'Plány', nav_subscribers:'Odběratelé', nav_history:'Historie', nav_settings:'Nastavení',
+    hero_label:'Měsíční opakující se příjmy', plans_title:'Plány', new_plan:'Nový plán',
+    hist_title:'Historie', hist_all:'Vše', hist_today:'Dnes', settings_title:'Nastavení',
+    save_settings:'Uložit nastavení', btn_logout:'Odhlásit se', label_dark_mode:'Tmavý režim',
+    app_language:'Jazyk aplikace', form_plan_name:'Název plánu', btn_save_plan:'Uložit plán', btn_cancel:'Zrušit',
+  },
+  sw: {
+    nav_home:'Nyumbani', nav_plans:'Mipango', nav_subscribers:'Waanachama', nav_history:'Historia', nav_settings:'Mipangilio',
+    hero_label:'Mapato ya Kila Mwezi', plans_title:'Mipango', new_plan:'Mpango Mpya',
+    hist_title:'Historia', hist_all:'Yote', settings_title:'Mipangilio',
+    save_settings:'Hifadhi mipangilio', btn_logout:'Toka', form_plan_name:'Jina la mpango', btn_cancel:'Ghairi',
+  },
+  tr: {
+    nav_home:'Ana Sayfa', nav_plans:'Planlar', nav_subscribers:'Aboneler', nav_history:'Geçmiş', nav_settings:'Ayarlar',
+    hero_label:'Aylık Yinelenen Gelir', plans_title:'Planlar', new_plan:'Yeni Plan',
+    hist_title:'Geçmiş', hist_all:'Tümü', hist_today:'Bugün', hist_this_week:'Bu hafta', hist_this_month:'Bu ay', hist_this_year:'Bu yıl',
+    settings_title:'Ayarlar', save_settings:'Ayarları kaydet', btn_logout:'Çıkış yap',
+    label_dark_mode:'Karanlık mod', app_language:'Uygulama dili', changes_apply:'Değişiklikler anında uygulanır.',
+    form_plan_name:'Plan adı', btn_save_plan:'Planı kaydet', btn_cancel:'İptal',
+    badge_active:'Aktif', plan_monthly:'aylık', plan_annual:'yıllık',
+    toast_settings_saved:'✓ Ayarlar kaydedildi',
+  },
+  uk: {
+    nav_home:'Головна', nav_plans:'Плани', nav_subscribers:'Підписники', nav_history:'Історія', nav_settings:'Налаштування',
+    hero_label:'Щомісячний дохід', plans_title:'Плани', new_plan:'Новий план',
+    hist_title:'Історія', hist_all:'Усі', settings_title:'Налаштування',
+    save_settings:'Зберегти налаштування', btn_logout:'Вийти', label_dark_mode:'Темний режим',
+    app_language:'Мова додатку', form_plan_name:'Назва плану', btn_save_plan:'Зберегти план', btn_cancel:'Скасувати',
+  },
+  id: {
+    nav_home:'Beranda', nav_plans:'Rencana', nav_subscribers:'Pelanggan', nav_history:'Riwayat', nav_settings:'Pengaturan',
+    hero_label:'Pendapatan Berulang Bulanan', plans_title:'Rencana', new_plan:'Rencana Baru',
+    hist_title:'Riwayat', hist_all:'Semua', hist_today:'Hari ini', settings_title:'Pengaturan',
+    save_settings:'Simpan pengaturan', btn_logout:'Keluar', label_dark_mode:'Mode gelap',
+    app_language:'Bahasa aplikasi', changes_apply:'Perubahan langsung diterapkan.',
+    form_plan_name:'Nama rencana', btn_save_plan:'Simpan rencana', btn_cancel:'Batal',
+  },
+  pl: {
+    nav_home:'Strona główna', nav_plans:'Plany', nav_subscribers:'Subskrybenci', nav_history:'Historia', nav_settings:'Ustawienia',
+    hero_label:'Miesięczne przychody cykliczne', plans_title:'Plany', new_plan:'Nowy plan',
+    hist_title:'Historia', hist_all:'Wszystko', settings_title:'Ustawienia',
+    save_settings:'Zapisz ustawienia', btn_logout:'Wyloguj się', label_dark_mode:'Tryb ciemny',
+    app_language:'Język aplikacji', form_plan_name:'Nazwa planu', btn_save_plan:'Zapisz plan', btn_cancel:'Anuluj',
+  },
+  sv: {
+    nav_home:'Hem', nav_plans:'Planer', nav_subscribers:'Prenumeranter', nav_history:'Historik', nav_settings:'Inställningar',
+    hero_label:'Månadsvis återkommande intäkter', plans_title:'Planer', new_plan:'Ny plan',
+    hist_title:'Historik', hist_all:'Alla', hist_today:'Idag', settings_title:'Inställningar',
+    save_settings:'Spara inställningar', btn_logout:'Logga ut', label_dark_mode:'Mörkt läge',
+    app_language:'Appspråk', changes_apply:'Ändringar tillämpas omedelbart.',
+    form_plan_name:'Plannamn', btn_save_plan:'Spara plan', btn_cancel:'Avbryt',
+    badge_active:'Aktiv', plan_monthly:'månadsvis', plan_annual:'årlig',
+    toast_settings_saved:'✓ Inställningar sparade',
+  },
+  tl: {
+    nav_home:'Home', nav_plans:'Mga Plano', nav_subscribers:'Mga Subscriber', nav_history:'Kasaysayan', nav_settings:'Mga Setting',
+    hero_label:'Buwanang Recurring na Kita', plans_title:'Mga Plano', new_plan:'Bagong Plano',
+    hist_title:'Kasaysayan', hist_all:'Lahat', settings_title:'Mga Setting',
+    save_settings:'I-save ang mga setting', btn_logout:'Mag-logout', form_plan_name:'Pangalan ng plano', btn_cancel:'Kanselahin',
+  },
+  he: {
+    nav_home:'בית', nav_plans:'תוכניות', nav_subscribers:'מנויים', nav_history:'היסטוריה', nav_settings:'הגדרות',
+    hero_label:'הכנסה חוזרת חודשית', plans_title:'תוכניות', new_plan:'תוכנית חדשה',
+    hist_title:'היסטוריה', hist_all:'הכל', settings_title:'הגדרות',
+    save_settings:'שמור הגדרות', btn_logout:'התנתק', form_plan_name:'שם התוכנית', btn_cancel:'ביטול',
+  },
+  el: {
+    nav_home:'Αρχική', nav_plans:'Πλάνα', nav_subscribers:'Συνδρομητές', nav_history:'Ιστορικό', nav_settings:'Ρυθμίσεις',
+    hero_label:'Μηνιαία Επαναλαμβανόμενα Έσοδα', plans_title:'Πλάνα', new_plan:'Νέο Πλάνο',
+    hist_title:'Ιστορικό', hist_all:'Όλα', settings_title:'Ρυθμίσεις',
+    save_settings:'Αποθήκευση', btn_logout:'Αποσύνδεση', form_plan_name:'Όνομα πλάνου', btn_cancel:'Ακύρωση',
+    badge_active:'Ενεργό', plan_monthly:'μηνιαίο', plan_annual:'ετήσιο',
+  },
+};
+
+// Fallback helper — if a key is missing in the current language, use English
+function t(key) {
+  const lang = settings.language || 'en';
+  return (T[lang] && T[lang][key]) || (T.en[key]) || key;
+}
+
+// ═══════════════════════════════════════════════════════
+// SCREEN NAVIGATION
+// ═══════════════════════════════════════════════════════
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  const screen = document.getElementById('screen-' + name);
+  const navBtn = document.getElementById('nav-' + name);
+  if (screen) screen.classList.add('active');
+  if (navBtn) navBtn.classList.add('active');
+  window.scrollTo(0, 0);
+  if (name === 'home')        renderHome();
+  if (name === 'plans')       renderPlans();
+  if (name === 'subscribers') renderSubscribers();
+  if (name === 'history')     renderHistory();
+}
+
+// ═══════════════════════════════════════════════════════
+// BTC PRICE FEED (blockchain.info → Coinbase fallback)
+// ═══════════════════════════════════════════════════════
+async function fetchRates() {
+  fetchFiatRate();
+  try {
+    const res = await fetch('https://blockchain.info/ticker');
+    const data = await res.json();
+    if (data.USD?.last) {
+      btcRate = data.USD.last;
+      lastRateTs = new Date();
+      updateRateBadge();
+      updateHeroRates();
+      return;
+    }
+  } catch(e) {}
+  try {
+    const res = await fetch('https://api.coinbase.com/v2/exchange-rates?currency=BTC');
+    const data = await res.json();
+    if (data.data?.rates?.USD) {
+      btcRate = parseFloat(data.data.rates.USD);
+      lastRateTs = new Date();
+      updateRateBadge();
+      updateHeroRates();
+      return;
+    }
+  } catch(e) {}
+  setRateBadgeOffline();
+}
+
+async function fetchFiatRate() {
+  const cur = settings.currency || 'USD';
+  if (cur === 'USD') { fiatRate = 1; return; }
+  try {
+    const res  = await fetch('https://api.coinbase.com/v2/exchange-rates?currency=USD');
+    const data = await res.json();
+    if (data.data?.rates?.[cur]) fiatRate = parseFloat(data.data.rates[cur]);
+  } catch(e) {}
+}
+
+function updateRateBadge() {
+  const label = document.getElementById('rate-label');
+  const time  = document.getElementById('rate-time');
+  const dot   = document.getElementById('rate-dot');
+  if (!label) return;
+  const sym = getCurrencySymbol();
+  label.textContent = sym + formatNum(btcRate * fiatRate, 0);
+  if (time) {
+    const ts = lastRateTs ? lastRateTs.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'}) : '';
+    time.textContent = ts ? '· ' + ts : '';
+  }
+  if (dot) dot.classList.remove('offline');
+  const badge = document.querySelector('.rate-badge');
+  if (badge) badge.classList.remove('offline');
+}
+
+function setRateBadgeOffline() {
+  const badge = document.querySelector('.rate-badge');
+  const dot   = document.getElementById('rate-dot');
+  const label = document.getElementById('rate-label');
+  if (badge) badge.classList.add('offline');
+  if (dot)   dot.classList.add('offline');
+  if (label) label.textContent = lastRateTs ? 'Offline' : 'No rates';
+}
+
+function updateHeroRates() {
+  const mrrEl    = document.getElementById('hero-mrr-amount');
+  const mrrBtcEl = document.getElementById('hero-mrr-btc');
+  const priceEl  = document.getElementById('hero-btc-price');
+  const sym = getCurrencySymbol();
+  if (priceEl) priceEl.textContent = sym + formatNum(btcRate * fiatRate, 0);
+  const mrr = calcMRR();
+  if (mrrEl) mrrEl.textContent = sym + formatNum(mrr * fiatRate, 2);
+  if (mrrBtcEl && btcRate > 0) mrrBtcEl.textContent = '≈ ' + (mrr / btcRate).toFixed(6) + ' BTC';
+  // Refresh quick stats if on home screen
+  if (document.getElementById('screen-home')?.classList.contains('active')) {
+    renderHomeQuickStats();
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// CURRENCY HELPERS
+// ═══════════════════════════════════════════════════════
+const CURRENCY_SYMBOLS = {
+  USD:'$', CAD:'CA$', GBP:'£', EUR:'€', AUD:'A$', CHF:'CHF ',
+  JPY:'¥', CNY:'¥', HKD:'HK$', SGD:'S$', NZD:'NZ$', SEK:'kr ',
+  NOK:'kr ', DKK:'kr ', MXN:'MX$', BRL:'R$', INR:'₹', ZAR:'R ',
+  AED:'د.إ', SAR:'ر.س', KRW:'₩', TRY:'₺', PLN:'zł ', CZK:'Kč ',
+  HUF:'Ft ', RON:'lei ', THB:'฿', MYR:'RM ', IDR:'Rp ', PHP:'₱',
+  NGN:'₦', KES:'KSh ', GHS:'GH₵', UGX:'USh ', TZS:'TSh ',
+};
+function getCurrencySymbol() {
+  return CURRENCY_SYMBOLS[settings.currency] || (settings.currency + ' ');
+}
+function formatNum(n, decimals = 2) {
+  const zeroDecimal = ['JPY','KRW','CLP','COP','VES','NGN'].includes(settings.currency);
+  const d = zeroDecimal ? 0 : decimals;
+  return Number(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+
+// ═══════════════════════════════════════════════════════
+// CURRENCY PILLS (Settings)
+// ═══════════════════════════════════════════════════════
+function renderCurrencyPills() {
+  const wrap = document.getElementById('currency-pills-wrap');
+  if (!wrap) return;
+  const currencies = [
+    { code:'USD', label:'$ USD' },
+    { code:'CAD', label:'CA$ CAD' },
+    { code:'GBP', label:'£ GBP' },
+    { code:'EUR', label:'€ EUR' },
+    { code:'AUD', label:'A$ AUD' },
+    { code:'CHF', label:'CHF' },
+    { code:'JPY', label:'¥ JPY' },
+    { code:'CNY', label:'¥ CNY' },
+    { code:'KRW', label:'₩ KRW' },
+    { code:'INR', label:'₹ INR' },
+    { code:'BRL', label:'R$ BRL' },
+    { code:'MXN', label:'MX$ MXN' },
+    { code:'SEK', label:'kr SEK' },
+    { code:'NOK', label:'kr NOK' },
+    { code:'DKK', label:'kr DKK' },
+    { code:'ZAR', label:'R ZAR' },
+    { code:'PLN', label:'zł PLN' },
+    { code:'NZD', label:'NZ$ NZD' },
+    { code:'SGD', label:'S$ SGD' },
+    { code:'HKD', label:'HK$ HKD' },
+    { code:'TRY', label:'₺ TRY' },
+    { code:'THB', label:'฿ THB' },
+    { code:'NGN', label:'₦ NGN' },
+    { code:'KES', label:'KSh KES' },
+  ];
+  wrap.innerHTML = '';
+  currencies.forEach(({ code, label }) => {
+    const active = (settings.currency || 'USD') === code;
+    const btn = document.createElement('button');
+    btn.textContent = label;
+    btn.style.cssText = [
+      'background:' + (active ? 'var(--amber)' : 'var(--warm-white)'),
+      'color:' + (active ? 'white' : 'var(--gray-text)'),
+      'border:1.5px solid ' + (active ? 'var(--amber)' : 'var(--stone)'),
+      'border-radius:20px',
+      'padding:6px 13px',
+      'font-size:12px',
+      'font-weight:600',
+      'cursor:pointer',
+      'font-family:var(--font-ui)',
+      'transition:all 0.15s',
+    ].join(';');
+    btn.onclick = () => { settings.currency = code; renderCurrencyPills(); fetchFiatRate(); updateHeroRates(); };
+    wrap.appendChild(btn);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// LANGUAGE
+// ═══════════════════════════════════════════════════════
+function setLanguage(lang) {
+  settings.language = lang;
+  saveSettingsToStorage();
+  applyLanguage();
+}
+
+function applyLanguage() {
+  const lang = settings.language || 'en';
+  const isRTL = ['ar','he'].includes(lang);
+  document.body.dir = isRTL ? 'rtl' : 'ltr';
+
+  // Nav
+  setEl('i18n-nav-home',        t('nav_home'));
+  setEl('i18n-nav-plans',       t('nav_plans'));
+  setEl('i18n-nav-subscribers', t('nav_subscribers'));
+  setEl('i18n-nav-history',     t('nav_history'));
+  setEl('i18n-nav-settings',    t('nav_settings'));
+
+  // Home
+  setEl('i18n-hero-label',        t('hero_label'));
+  setEl('i18n-hero-subscribers',  t('hero_subscribers'));
+  setEl('i18n-hero-plans',        t('hero_plans'));
+  setEl('i18n-recent-activity',   t('recent_activity'));
+  setEl('i18n-home-empty-title',  t('home_empty_title'));
+  setEl('i18n-home-empty-body',   t('home_empty_body'));
+  setEl('i18n-create-first-plan', t('create_first_plan'));
+
+  // Plans
+  setEl('i18n-plans-title',       t('plans_title'));
+  setEl('i18n-new-plan',          t('new_plan'));
+  setEl('i18n-plans-empty-title', t('plans_empty_title') || t('plans_empty_title'));
+  setEl('i18n-plans-empty-body',  t('plans_empty_body'));
+
+  // Subscribers
+  setEl('i18n-subscribers-title',       t('subscribers_title'));
+  setEl('i18n-subscribers-empty-title', t('subscribers_empty_title') || t('subscribers_empty_title'));
+  setEl('i18n-subscribers-empty-body',  t('subscribers_empty_body'));
+
+  // History
+  setEl('i18n-hist-title',       t('hist_title'));
+  setEl('i18n-hist-export-csv',  t('hist_export_csv'));
+  setEl('i18n-hist-koinly',      t('hist_koinly') || 'Koinly');
+  setEl('i18n-hist-clear-all',   t('hist_clear_all'));
+  setEl('i18n-hist-total-label', t('hist_total_logged'));
+  setEl('i18n-hist-empty',       t('hist_empty'));
+  setEl('i18n-hist-koinly-title',t('hist_koinly_title'));
+  setEl('i18n-hist-koinly-sub',  t('hist_koinly_sub'));
+  // Period buttons
+  ['all','today','this_week','this_month','this_year'].forEach((k, i) => {
+    const ids = ['period-all','period-today','period-week','period-month','period-year'];
+    const keys= ['hist_all','hist_today','hist_this_week','hist_this_month','hist_this_year'];
+    const el = document.getElementById(ids[i]);
+    if (el) el.textContent = t(keys[i]);
+  });
+
+  // Settings
+  setEl('i18n-settings-title',       t('settings_title'));
+  setEl('i18n-save-settings',        t('save_settings'));
+  setEl('i18n-section-account',      t('section_account'));
+  setEl('i18n-section-wallet',       t('section_wallet'));
+  setEl('i18n-section-hardware',     t('section_hardware'));
+  setEl('i18n-section-display',      t('section_display'));
+  setEl('i18n-section-language',     t('section_language'));
+  setEl('i18n-section-notifications',t('section_notifications') || 'Notifications');
+  setEl('i18n-section-tax',          t('section_tax') || 'Tax');
+  setEl('i18n-section-trouble',      t('section_trouble'));
+  setEl('i18n-section-data',         t('section_data'));
+  setEl('i18n-label-dark-mode',      t('label_dark_mode'));
+  setEl('i18n-hint-dark-mode',       t('hint_dark_mode'));
+  setEl('i18n-app-language',         t('app_language'));
+  setEl('i18n-changes-apply',        t('changes_apply'));
+  setEl('i18n-btn-logout',           t('btn_logout'));
+  setEl('i18n-account-signout-desc', t('account_signout_desc') || t('account_signout_desc'));
+
+  // Plan form
+  setEl('i18n-form-plan-name',     t('form_plan_name'));
+  setEl('i18n-form-plan-price',    t('form_plan_price'));
+  setEl('i18n-form-plan-interval', t('form_plan_interval'));
+  setEl('i18n-form-plan-desc',     t('form_plan_desc'));
+  setEl('i18n-btn-save-plan',      t('btn_save_plan'));
+  setEl('i18n-btn-cancel',         t('btn_cancel'));
+
+  // CSV modal
+  setEl('i18n-csv-title',        t('csv_title') || 'Export CSV');
+  setEl('i18n-btn-export-range', t('btn_export_range'));
+  setEl('i18n-btn-export-all',   t('btn_export_all'));
+
+  // Lang select
+  const langSel = document.getElementById('language-select');
+  if (langSel) langSel.value = lang;
+}
+
+function setEl(id, text) {
+  const el = document.getElementById(id);
+  if (el && text) el.textContent = text;
+}
+
+// ═══════════════════════════════════════════════════════
+// DARK MODE
+// ═══════════════════════════════════════════════════════
+function toggleDarkMode(on) {
+  settings.darkMode = on;
+  document.body.classList.toggle('dark-mode', on);
+  saveSettingsToStorage();
+}
+
+// ═══════════════════════════════════════════════════════
+// STORAGE
+// ═══════════════════════════════════════════════════════
+function loadSettings() {
+  try {
+    const s = localStorage.getItem(STORAGE_KEY);
+    if (s) settings = { ...settings, ...JSON.parse(s) };
+    if (!settings.currency) settings.currency = 'USD';
+    if (!settings.language) settings.language = 'en';
+  } catch(e) {}
+}
+function saveSettingsToStorage() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(settings)); } catch(e) {}
+}
+function loadPayments() {
+  try {
+    const p = localStorage.getItem(PAYMENTS_KEY);
+    if (p) payments = JSON.parse(p);
+  } catch(e) { payments = []; }
+}
+function savePaymentsToStorage() {
+  try { localStorage.setItem(PAYMENTS_KEY, JSON.stringify(payments)); } catch(e) {}
+}
+function loadPlans() {
+  try {
+    const p = localStorage.getItem(PLANS_KEY);
+    if (p) plans = JSON.parse(p);
+  } catch(e) { plans = []; }
+}
+function savePlansToStorage() {
+  try { localStorage.setItem(PLANS_KEY, JSON.stringify(plans)); } catch(e) {}
+}
+function loadSubscribers() {
+  try {
+    const s = localStorage.getItem(SUBSCRIBERS_KEY);
+    if (s) subscribers = JSON.parse(s);
+  } catch(e) { subscribers = []; }
+}
+function saveSubscribersToStorage() {
+  try { localStorage.setItem(SUBSCRIBERS_KEY, JSON.stringify(subscribers)); } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════════
+// SESSION / AUTH
+// ═══════════════════════════════════════════════════════
+function getSessionToken() {
+  return localStorage.getItem(SESSION_KEY);
+}
+function setSessionToken(token) {
+  localStorage.setItem(SESSION_KEY, token);
+}
+function clearSession() {
+  localStorage.removeItem(SESSION_KEY);
+}
+
+async function requestMagicLink() {
+  const input = document.getElementById('login-email-input');
+  const email = input ? input.value.trim() : '';
+  if (!email || !email.includes('@')) {
+    showToast('Please enter a valid email address');
+    return;
+  }
+  try {
+    const res = await fetch(API_BASE + '/auth/request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('login-form-wrap').style.display = 'none';
+      const successWrap = document.getElementById('login-success-wrap');
+      successWrap.style.display = 'block';
+      const emailEl = document.getElementById('login-success-email');
+      if (emailEl) emailEl.textContent = email;
+    } else {
+      showToast('Something went wrong — please try again');
+    }
+  } catch(e) {
+    showToast('Could not connect — check your internet connection');
+  }
+}
+
+async function checkSession() {
+  // Check URL hash for session token (from magic link redirect)
+  const hash = window.location.hash;
+  if (hash.startsWith('#session=')) {
+    const token = hash.slice(9);
+    setSessionToken(token);
+    window.history.replaceState(null, '', window.location.pathname);
+  }
+  const token = getSessionToken();
+  if (!token) {
+    showLoginScreen();
+    return;
+  }
+  // Verify with server
+  try {
+    const res = await fetch(API_BASE + '/merchant/dashboard', {
+      headers: { 'Authorization': 'Bearer ' + token },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      settings.email       = data.email       || '';
+      settings.displayName = data.displayName || '';
+      settings.btcWallet   = data.walletAddress|| '';
+      showAppScreen();
+    } else {
+      clearSession();
+      showLoginScreen();
+    }
+  } catch(e) {
+    // Offline — still show app if token exists locally
+    showAppScreen();
+  }
+}
+
+function showLoginScreen() {
+  document.getElementById('login-screen').classList.add('active');
+  document.getElementById('app-wrap').style.display = 'none';
+}
+
+function showAppScreen() {
+  document.getElementById('login-screen').classList.remove('active');
+  document.getElementById('app-wrap').style.display = 'block';
+  applySettings();
+  updateTopbarGreeting();
+  renderHome();
+  renderHistory();
+  renderSubscribers();
+  renderPlans();
+}
+
+async function logout() {
+  const token = getSessionToken();
+  if (token) {
+    try {
+      await fetch(API_BASE + '/auth/logout', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token },
+      });
+    } catch(e) {}
+  }
+  clearSession();
+  showLoginScreen();
+}
+
+// ═══════════════════════════════════════════════════════
+// SETTINGS SAVE
+// ═══════════════════════════════════════════════════════
+async function saveSettings() {
+  const nameEl    = document.getElementById('settings-display-name');
+  const walletEl  = document.getElementById('settings-btc-wallet');
+  const lightEl   = document.getElementById('settings-lightning-addr');
+  const taxEl     = document.getElementById('settings-tax-rate');
+  const digestEl  = document.getElementById('digest-toggle');
+  const digestEmailEl = document.getElementById('digest-email-input');
+
+  if (nameEl)   settings.displayName   = nameEl.value.trim();
+  if (walletEl) settings.btcWallet     = walletEl.value.trim();
+  if (lightEl)  settings.lightningAddr = lightEl.value.trim();
+  if (taxEl)    settings.taxRate       = parseFloat(taxEl.value) || '';
+  if (digestEl) settings.digestEnabled = digestEl.checked;
+  if (digestEmailEl) settings.digestEmail = digestEmailEl.value.trim();
+
+  saveSettingsToStorage();
+
+  // Push profile + wallet to server
+  const token = getSessionToken();
+  if (token) {
+    try {
+      if (settings.displayName) {
+        await fetch(API_BASE + '/merchant/profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ displayName: settings.displayName }),
+        });
+      }
+      if (settings.btcWallet) {
+        await fetch(API_BASE + '/merchant/wallet', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ address: settings.btcWallet }),
+        });
+      }
+    } catch(e) {}
+  }
+
+  // Sync full data set + update UI
+  syncPush();
+  updateTopbarGreeting();
+  updateHeroRates(); // MRR uses tax rate — refresh
+  showToast(t('toast_settings_saved'));
+}
+
+// ═══════════════════════════════════════════════════════
+// HOME SCREEN — Full Section 2 Logic
+// ═══════════════════════════════════════════════════════
+
+function renderHome() {
+  updateHeroRates();
+  renderHomeQuickStats();
+  renderRenewalOutlook();
+  renderHomeActivity();
+}
+
+function renderHomeQuickStats() {
+  const activeSubs  = subscribers.filter(s => s.status === 'active');
+  const canceledSubs= subscribers.filter(s => s.status === 'canceled');
+  const mrr         = calcMRR();
+  const arr         = mrr * 12;
+  const avgPerSub   = activeSubs.length > 0 ? mrr / activeSubs.length : 0;
+  const sym         = getCurrencySymbol();
+
+  // Hero
+  const heroMRR   = document.getElementById('hero-mrr-amount');
+  const heroMRRBtc= document.getElementById('hero-mrr-btc');
+  const heroSubs  = document.getElementById('hero-subscribers');
+  const heroPlans = document.getElementById('hero-plans');
+
+  if (heroMRR)    heroMRR.textContent = sym + formatNum(mrr * fiatRate, 2);
+  if (heroMRRBtc && btcRate > 0) heroMRRBtc.textContent = '≈ ' + (mrr / btcRate).toFixed(6) + ' BTC';
+  else if (heroMRRBtc) heroMRRBtc.textContent = '';
+  if (heroSubs)   heroSubs.textContent  = activeSubs.length;
+  if (heroPlans)  heroPlans.textContent = plans.filter(p => p.status === 'active').length;
+
+  // Trend (30-day vs prior 30-day)
+  const trendEl = document.getElementById('hero-trend');
+  if (trendEl) {
+    const now   = Date.now();
+    const day30 = 30 * 24 * 60 * 60 * 1000;
+    const recent = payments.filter(p => now - new Date(p.timestamp).getTime() < day30)
+                           .reduce((s, p) => s + p.usd, 0);
+    const prior  = payments.filter(p => {
+      const age = now - new Date(p.timestamp).getTime();
+      return age >= day30 && age < day30 * 2;
+    }).reduce((s, p) => s + p.usd, 0);
+
+    if (recent > 0 || prior > 0) {
+      trendEl.style.display = 'inline-flex';
+      if (prior === 0) {
+        trendEl.textContent = '↑ First 30 days';
+        trendEl.className = 'hero-trend up';
+      } else {
+        const pct = ((recent - prior) / prior * 100).toFixed(1);
+        const up  = recent >= prior;
+        trendEl.textContent = (up ? '↑ +' : '↓ ') + pct + '% vs prior 30 days';
+        trendEl.className   = 'hero-trend ' + (up ? 'up' : 'down');
+      }
+    } else {
+      trendEl.style.display = 'none';
+    }
+  }
+
+  // Quick stat cards
+  const qsARR      = document.getElementById('qs-arr');
+  const qsARRSub   = document.getElementById('qs-arr-sub');
+  const qsAvg      = document.getElementById('qs-avg');
+  const qsAvgSub   = document.getElementById('qs-avg-sub');
+  const qsRenewals = document.getElementById('qs-renewals');
+  const qsChurn    = document.getElementById('qs-churn');
+
+  if (qsARR)      qsARR.textContent      = sym + formatNum(arr * fiatRate, 0);
+  if (qsARRSub)   qsARRSub.textContent   = 'run rate';
+  if (qsAvg)      qsAvg.textContent      = sym + formatNum(avgPerSub * fiatRate, 2);
+  if (qsAvgSub)   qsAvgSub.textContent   = 'per month';
+  if (qsChurn)    qsChurn.textContent    = canceledSubs.length;
+
+  // Renewals due in next 7 days
+  const next7 = getUpcomingRenewals(7);
+  if (qsRenewals) qsRenewals.textContent = next7.length;
+}
+
+function getUpcomingRenewals(days) {
+  const now    = Date.now();
+  const cutoff = now + days * 24 * 60 * 60 * 1000;
+  return subscribers
+    .filter(s => s.status === 'active' && s.nextRenewal)
+    .filter(s => {
+      const t = new Date(s.nextRenewal).getTime();
+      return t >= now && t <= cutoff;
+    })
+    .sort((a, b) => new Date(a.nextRenewal) - new Date(b.nextRenewal));
+}
+
+function renderRenewalOutlook() {
+  const upcoming = getUpcomingRenewals(14); // next 14 days
+  const wrap     = document.getElementById('renewal-outlook-wrap');
+  const list     = document.getElementById('renewal-list');
+  if (!wrap || !list) return;
+
+  if (upcoming.length === 0) {
+    wrap.style.display = 'none';
+    return;
+  }
+  wrap.style.display = 'block';
+
+  // Show up to 5
+  const toShow = upcoming.slice(0, 5);
+  list.innerHTML = toShow.map(sub => {
+    const plan   = plans.find(p => p.id === sub.planId);
+    const planName = plan ? plan.name : '—';
+    const renewal  = new Date(sub.nextRenewal);
+    const daysOut  = Math.ceil((renewal.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    const dateStr  = renewal.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const urgency  = daysOut <= 2 ? 'urgent' : daysOut <= 5 ? 'soon' : 'ok';
+    const daysLabel= daysOut === 0 ? 'today' : daysOut === 1 ? 'tomorrow' : 'in ' + daysOut + ' days';
+    const initials = sub.email ? sub.email[0].toUpperCase() : '?';
+    const sym = getCurrencySymbol();
+    const price = plan ? formatNum(plan.priceUSD * fiatRate, 2) : '—';
+
+    return `
+      <div class="renewal-row">
+        <div style="width:30px;height:30px;border-radius:50%;background:var(--amber-pale);border:1.5px solid var(--amber-light);
+          display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:13px;
+          color:var(--amber-deep);font-weight:500;flex-shrink:0;">${initials}</div>
+        <div class="renewal-info">
+          <div class="renewal-email">${escHtml(sub.email)}</div>
+          <div class="renewal-plan">${escHtml(planName)}</div>
+        </div>
+        <div class="renewal-right">
+          <div class="renewal-date">${dateStr} · ${sym}${price}</div>
+          <div class="renewal-days ${urgency}">${daysLabel}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderHomeActivity() {
+  const list   = document.getElementById('home-activity-list');
+  const empty  = document.getElementById('home-empty');
+  const viewBtn= document.getElementById('home-view-history-btn');
+  if (!list) return;
+
+  // Combine payments into activity events, newest first, max 8
+  const events = payments
+    .slice()
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+    .slice(0, 8);
+
+  if (events.length === 0) {
+    if (empty)   empty.style.display = 'flex';
+    if (viewBtn) viewBtn.style.display = 'none';
+    return;
+  }
+
+  if (empty)   empty.style.display = 'none';
+  if (viewBtn) viewBtn.style.display = 'block';
+
+  const sym = getCurrencySymbol();
+
+  // Keep empty div, replace only activity rows
+  const existingRows = list.querySelectorAll('.activity-row');
+  existingRows.forEach(r => r.remove());
+
+  events.forEach(pmt => {
+    const plan   = plans.find(p => p.id === pmt.planId);
+    const sub    = subscribers.find(s => s.id === pmt.subscriberId);
+    const planName = plan ? plan.name : 'Subscription';
+    const subEmail = sub  ? sub.email : pmt.note || '';
+    const amt    = sym + formatNum(pmt.usd * fiatRate, 2);
+    const ts     = new Date(pmt.timestamp);
+    const timeStr= formatRelativeTime(ts);
+    const coin   = pmt.coin || 'BTC';
+    const coinIcon = coin === 'BTC' ? '₿' : coin === 'LN' ? '⚡' : coin;
+
+    const row = document.createElement('div');
+    row.className = 'activity-row';
+    row.innerHTML = `
+      <div class="activity-icon-wrap payment">${coinIcon}</div>
+      <div class="activity-info">
+        <div class="activity-title">${escHtml(planName)}</div>
+        <div class="activity-sub">${escHtml(subEmail)}</div>
+      </div>
+      <div class="activity-right">
+        <div class="activity-amount">+${amt}</div>
+        <div class="activity-time">${timeStr}</div>
+      </div>`;
+    list.appendChild(row);
+  });
+}
+
+function formatRelativeTime(date) {
+  const diff = Date.now() - date.getTime();
+  const mins  = Math.floor(diff / 60000);
+  const hrs   = Math.floor(diff / 3600000);
+  const days  = Math.floor(diff / 86400000);
+  if (mins < 1)   return 'just now';
+  if (mins < 60)  return mins + 'm ago';
+  if (hrs  < 24)  return hrs  + 'h ago';
+  if (days < 7)   return days + 'd ago';
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// Also update applyLanguage for home screen additions
+function applyHomeLanguage() {
+  setEl('i18n-qs-arr',          t('qs_arr')       || 'Annual Revenue');
+  setEl('i18n-qs-avg',          t('qs_avg')       || 'Avg per Subscriber');
+  setEl('i18n-qs-renewals',     t('qs_renewals')  || 'Renewals Due');
+  setEl('i18n-qs-churn',        t('qs_churn')     || 'Cancelled');
+  setEl('i18n-renewal-outlook', t('renewal_outlook') || 'Upcoming Renewals');
+  setEl('i18n-view-all',        t('view_all')     || 'View all →');
+}
+
+// ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+// PLANS — Section 3
+// ═══════════════════════════════════════════════════════
+function calcMRR() {
+  return plans
+    .filter(p => p.status === 'active')
+    .reduce((sum, p) => {
+      const monthly    = p.interval === 'annual' ? p.priceUSD / 12 : p.priceUSD;
+      const activeSubs = subscribers.filter(s => s.planId === p.id && s.status === 'active').length;
+      return sum + (monthly * activeSubs);
+    }, 0);
+}
+
+function generateId() {
+  return 'plan-' + Math.random().toString(36).slice(2, 10);
+}
+
+function generateShareToken() {
+  return Math.random().toString(36).slice(2, 12) + Math.random().toString(36).slice(2, 12);
+}
+
+function openCreatePlan() {
+  // Reset form
+  document.getElementById('plan-modal-id').value    = '';
+  document.getElementById('plan-name-input').value  = '';
+  document.getElementById('plan-price-input').value = '';
+  document.getElementById('plan-desc-input').value  = '';
+  selectInterval('monthly');
+  const title = document.getElementById('plan-modal-title');
+  const sub   = document.getElementById('plan-modal-sub');
+  if (title) title.textContent = t('new_plan') || 'New Plan';
+  if (sub)   sub.textContent   = t('form_plan_interval_hint') || 'Define your subscription — name, price, and billing interval.';
+  document.getElementById('plan-modal').classList.add('active');
+  setTimeout(() => {
+    const inp = document.getElementById('plan-name-input');
+    if (inp) inp.focus();
+  }, 260);
+}
+
+function openEditPlan(planId) {
+  const plan = plans.find(p => p.id === planId);
+  if (!plan) return;
+  document.getElementById('plan-modal-id').value    = plan.id;
+  document.getElementById('plan-name-input').value  = plan.name;
+  document.getElementById('plan-price-input').value = plan.priceUSD;
+  document.getElementById('plan-desc-input').value  = plan.desc || '';
+  selectInterval(plan.interval || 'monthly');
+  const title = document.getElementById('plan-modal-title');
+  const sub   = document.getElementById('plan-modal-sub');
+  if (title) title.textContent = 'Edit Plan';
+  if (sub)   sub.textContent   = 'Update your plan details.';
+  document.getElementById('plan-modal').classList.add('active');
+}
+
+function closePlanModal() {
+  document.getElementById('plan-modal').classList.remove('active');
+}
+
+function selectInterval(v) {
+  selectedInterval = v;
+  document.getElementById('interval-monthly').classList.toggle('active', v === 'monthly');
+  document.getElementById('interval-annual').classList.toggle('active', v === 'annual');
+}
+
+function savePlan() {
+  const name  = (document.getElementById('plan-name-input').value  || '').trim();
+  const price = parseFloat(document.getElementById('plan-price-input').value || '');
+  const desc  = (document.getElementById('plan-desc-input').value  || '').trim();
+  const id    = document.getElementById('plan-modal-id').value;
+
+  if (!name) { showToast('Please enter a plan name'); return; }
+  if (!price || price <= 0) { showToast('Please enter a valid price'); return; }
+
+  if (id) {
+    // Edit existing
+    const idx = plans.findIndex(p => p.id === id);
+    if (idx > -1) {
+      plans[idx].name      = name;
+      plans[idx].priceUSD  = price;
+      plans[idx].interval  = selectedInterval;
+      plans[idx].desc      = desc;
+    }
+  } else {
+    // Create new
+    plans.push({
+      id:          generateId(),
+      name,
+      priceUSD:    price,
+      interval:    selectedInterval,
+      desc,
+      status:      'active',
+      createdAt:   new Date().toISOString(),
+      shareToken:  generateShareToken(),
+    });
+  }
+
+  savePlansToStorage();
+  closePlanModal();
+  renderPlans();
+  renderHome();
+  showToast(t('toast_plan_saved'));
+}
+
+function togglePlanStatus(planId) {
+  const plan = plans.find(p => p.id === planId);
+  if (!plan) return;
+  if (plan.status === 'active') {
+    plan.status = 'paused';
+    showToast('Plan paused — existing subscribers unaffected');
+  } else if (plan.status === 'paused') {
+    plan.status = 'active';
+    showToast('Plan resumed');
+  }
+  savePlansToStorage();
+  renderPlans();
+  renderHome();
+}
+
+function deletePlan(planId) {
+  const plan = plans.find(p => p.id === planId);
+  if (!plan) return;
+  const activeSubs = subscribers.filter(s => s.planId === planId && s.status === 'active').length;
+  if (activeSubs > 0) {
+    showToast('Pause the plan first — ' + activeSubs + ' active subscriber' + (activeSubs !== 1 ? 's' : ''));
+    return;
+  }
+  showConfirm(
+    'Delete "' + plan.name + '"?',
+    'This cannot be undone. The payment link will stop working.',
+    'Delete',
+    () => {
+      plans = plans.filter(p => p.id !== planId);
+      savePlansToStorage();
+      renderPlans();
+      renderHome();
+      showToast(t('toast_plan_deleted'));
+    }
+  );
+}
+
+function copyShareLink(planId) {
+  const plan = plans.find(p => p.id === planId);
+  if (!plan) return;
+  const url = 'https://ricorra.io/pay/' + plan.shareToken;
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(url).then(() => showToast(t('toast_copied')));
+  } else {
+    // iOS Safari fallback
+    const ta = document.createElement('textarea');
+    ta.value = url;
+    ta.style.cssText = 'position:fixed;opacity:0;';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    try { document.execCommand('copy'); showToast(t('toast_copied')); } catch(e) {}
+    document.body.removeChild(ta);
+  }
+}
+
+function openShareSheet(planId) {
+  const plan = plans.find(p => p.id === planId);
+  if (!plan) return;
+  const url  = 'https://ricorra.io/pay/' + plan.shareToken;
+  const text = 'Subscribe to ' + plan.name + ': ' + url;
+  if (navigator.share) {
+    navigator.share({ title: plan.name, text, url }).catch(() => {});
+  } else {
+    copyShareLink(planId);
+  }
+}
+
+function renderPlans() {
+  const list  = document.getElementById('plans-list');
+  const empty = document.getElementById('plans-empty');
+  if (!list) return;
+
+  // Remove old plan cards (keep empty state div)
+  list.querySelectorAll('.plan-card').forEach(c => c.remove());
+
+  if (plans.length === 0) {
+    if (empty) empty.style.display = 'flex';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  const sym = getCurrencySymbol();
+
+  // Sort: active first, then paused, then archived
+  const sorted = [...plans].sort((a, b) => {
+    const order = { active: 0, paused: 1, archived: 2 };
+    return (order[a.status] ?? 3) - (order[b.status] ?? 3);
+  });
+
+  sorted.forEach(plan => {
+    const activeSubs  = subscribers.filter(s => s.planId === plan.id && s.status === 'active').length;
+    const totalSubs   = subscribers.filter(s => s.planId === plan.id).length;
+    const mrr         = plan.interval === 'annual'
+      ? (plan.priceUSD / 12) * activeSubs
+      : plan.priceUSD * activeSubs;
+    const priceLabel  = sym + formatNum(plan.priceUSD * fiatRate, 2) + ' / ' + (t('plan_' + plan.interval) || plan.interval);
+    const shareUrl    = 'https://ricorra.io/pay/' + (plan.shareToken || '');
+
+    const badgeClass  = plan.status === 'active' ? 'active' : plan.status === 'paused' ? 'paused' : 'archived';
+    const badgeLabel  = t('badge_' + plan.status) || plan.status;
+    const pauseLabel  = plan.status === 'active' ? (t('plan_pause') || 'Pause') : (t('plan_resume') || 'Resume');
+    const mrrLabel    = sym + formatNum(mrr * fiatRate, 2) + '/mo MRR';
+
+    const card = document.createElement('div');
+    card.className = 'plan-card';
+    card.innerHTML = `
+      <div class="plan-card-top">
+        <div>
+          <div class="plan-card-name">${escHtml(plan.name)}</div>
+          <div class="plan-card-price">${priceLabel}${plan.desc ? ' · ' + escHtml(plan.desc) : ''}</div>
+        </div>
+        <span class="plan-badge ${badgeClass}">${badgeLabel}</span>
+      </div>
+      <div class="plan-card-bottom">
+        <div class="plan-card-meta">
+          <span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            ${activeSubs} ${t('plan_subscribers') || 'subscribers'}
+          </span>
+          <span style="color:var(--green);font-weight:600;">${mrrLabel}</span>
+        </div>
+        <div class="plan-card-actions">
+          <button class="plan-action-btn" onclick="copyShareLink('${plan.id}')" title="Copy payment link">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            ${t('plan_share') || 'Share'}
+          </button>
+          <button class="plan-action-btn" onclick="openEditPlan('${plan.id}')">${t('plan_edit') || 'Edit'}</button>
+          <button class="plan-action-btn" onclick="togglePlanStatus('${plan.id}')">${pauseLabel}</button>
+          <button class="plan-action-btn" onclick="deletePlan('${plan.id}')" style="color:var(--red);">✕</button>
+        </div>
+      </div>
+      <div style="padding:10px 18px;background:var(--warm-white);border-top:1px solid var(--stone);">
+        <div class="share-link-box">
+          <span class="share-link-url">${shareUrl}</span>
+          <button class="share-link-copy" onclick="copyShareLink('${plan.id}')">Copy</button>
+          ${navigator.share ? `<button class="share-link-copy" style="background:var(--charcoal);" onclick="openShareSheet('${plan.id}')">Share</button>` : ''}
+        </div>
+      </div>`;
+    list.appendChild(card);
+  });
+}
+
+// ── CUSTOM CONFIRM DIALOG (iOS Safari safe — no native confirm) ──
+function showConfirm(title, body, actionLabel, onConfirm) {
+  // Remove any existing confirm
+  document.getElementById('ricorra-confirm-overlay')?.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'ricorra-confirm-overlay';
+  overlay.style.cssText = [
+    'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:300',
+    'display:flex;align-items:flex-end;justify-content:center',
+  ].join(';');
+
+  overlay.innerHTML = `
+    <div style="background:var(--parchment);border-radius:20px 20px 0 0;width:100%;max-width:480px;padding:24px 20px 32px;animation:sheetUp 0.2s ease;">
+      <div style="width:36px;height:4px;background:var(--stone);border-radius:2px;margin:0 auto 20px;"></div>
+      <div style="font-family:var(--font-display);font-size:20px;font-weight:500;color:var(--charcoal);margin-bottom:8px;">${escHtml(title)}</div>
+      <div style="font-size:13px;color:var(--gray-text);margin-bottom:22px;line-height:1.5;">${escHtml(body)}</div>
+      <button id="confirm-action-btn" style="width:100%;background:var(--red);color:white;border:none;border-radius:50px;padding:13px;font-family:var(--font-ui);font-size:14px;font-weight:600;cursor:pointer;margin-bottom:8px;">${escHtml(actionLabel)}</button>
+      <button id="confirm-cancel-btn" style="width:100%;background:none;border:none;color:var(--gray-text);font-family:var(--font-ui);font-size:14px;cursor:pointer;padding:10px;">Cancel</button>
+    </div>`;
+
+  document.body.appendChild(overlay);
+  document.getElementById('confirm-action-btn').onclick = () => { overlay.remove(); onConfirm(); };
+  document.getElementById('confirm-cancel-btn').onclick = () => overlay.remove();
+  overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+}
+
+// ═══════════════════════════════════════════════════════
+// SUBSCRIBERS — Section 4
+// ═══════════════════════════════════════════════════════
+let subscriberFilter = '';
+
+function renderSubscribers() {
+  const list       = document.getElementById('subscribers-list');
+  const empty      = document.getElementById('subscribers-empty');
+  const countLabel = document.getElementById('subscriber-count-label');
+  if (!list) return;
+
+  const activeSubs  = subscribers.filter(s => s.status === 'active');
+  const query       = (document.getElementById('subscriber-search')?.value || '').toLowerCase();
+
+  // Update count label
+  if (countLabel) {
+    countLabel.textContent = activeSubs.length + ' active';
+  }
+
+  // Apply search filter
+  const filtered = subscribers.filter(s => {
+    if (!query) return true;
+    const plan = plans.find(p => p.id === s.planId);
+    return (
+      s.email.toLowerCase().includes(query) ||
+      (plan && plan.name.toLowerCase().includes(query))
+    );
+  });
+
+  // Remove old rows
+  list.querySelectorAll('.subscriber-row').forEach(r => r.remove());
+
+  if (filtered.length === 0 && subscribers.length === 0) {
+    if (empty) empty.style.display = 'flex';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  if (filtered.length === 0) {
+    const noResult = document.createElement('div');
+    noResult.className = 'empty-state';
+    noResult.style.padding = '32px';
+    noResult.innerHTML = `<div class="empty-body">No subscribers match your search.</div>`;
+    list.appendChild(noResult);
+    return;
+  }
+
+  const sym = getCurrencySymbol();
+
+  // Sort: active → overdue → canceled, then by email
+  const sorted = [...filtered].sort((a, b) => {
+    const order = { active: 0, overdue: 1, canceled: 2 };
+    const oa = order[a.status] ?? 3;
+    const ob = order[b.status] ?? 3;
+    if (oa !== ob) return oa - ob;
+    return a.email.localeCompare(b.email);
+  });
+
+  sorted.forEach(sub => {
+    const plan      = plans.find(p => p.id === sub.planId);
+    const planName  = plan ? plan.name : '—';
+    const interval  = plan ? (t('plan_' + plan.interval) || plan.interval) : '';
+    const price     = plan ? sym + formatNum(plan.priceUSD * fiatRate, 2) : '—';
+    const initials  = sub.email ? sub.email[0].toUpperCase() : '?';
+    const statusDot = sub.status === 'active' ? 'active' : sub.status === 'overdue' ? 'overdue' : 'canceled';
+
+    let renewalStr = '';
+    if (sub.nextRenewal && sub.status === 'active') {
+      const d = new Date(sub.nextRenewal);
+      renewalStr = 'Renews ' + d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    } else if (sub.status === 'canceled') {
+      renewalStr = 'Canceled';
+    } else if (sub.status === 'overdue') {
+      renewalStr = 'Payment overdue';
+    }
+
+    const pmtCount = (sub.payments || []).length;
+
+    const row = document.createElement('div');
+    row.className = 'subscriber-row';
+    row.onclick   = () => openSubscriberDetail(sub.id);
+    row.innerHTML = `
+      <span class="subscriber-status ${statusDot}"></span>
+      <div class="subscriber-avatar">${initials}</div>
+      <div class="subscriber-info">
+        <div class="subscriber-email">${escHtml(sub.email)}</div>
+        <div class="subscriber-plan">${escHtml(planName)} · ${interval}</div>
+      </div>
+      <div class="subscriber-right">
+        <div class="subscriber-amount">${price}</div>
+        <div class="subscriber-renewal">${renewalStr}</div>
+      </div>`;
+    list.appendChild(row);
+  });
+}
+
+function filterSubscribers(q) {
+  subscriberFilter = q;
+  renderSubscribers();
+}
+
+function openSubscriberDetail(subId) {
+  const sub  = subscribers.find(s => s.id === subId);
+  if (!sub) return;
+  const plan = plans.find(p => p.id === sub.planId);
+
+  // Populate header
+  const avatarEl = document.getElementById('sub-modal-avatar');
+  const emailEl  = document.getElementById('sub-modal-email');
+  const planEl   = document.getElementById('sub-modal-plan');
+  if (avatarEl) avatarEl.textContent = sub.email[0].toUpperCase();
+  if (emailEl)  emailEl.textContent  = sub.email;
+  if (planEl) {
+    const interval = plan ? (t('plan_' + plan.interval) || plan.interval) : '';
+    planEl.textContent = (plan ? plan.name : '—') + (interval ? ' · ' + interval : '');
+  }
+
+  // Render subscriber's payment history
+  const histEl = document.getElementById('sub-modal-history');
+  if (histEl) {
+    const subPayments = payments
+      .filter(p => p.subscriberId === subId)
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    const sym = getCurrencySymbol();
+
+    if (subPayments.length === 0) {
+      histEl.innerHTML = `<div style="padding:20px;text-align:center;font-size:13px;color:var(--gray-text);">No payments yet</div>`;
+    } else {
+      const totalUSD = subPayments.reduce((s, p) => s + p.usd, 0);
+      histEl.innerHTML = `
+        <div style="padding:14px 0 8px;border-top:1px solid var(--stone);margin-top:4px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <span style="font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--gray-text);">Payment History</span>
+            <span style="font-family:var(--font-display);font-size:16px;font-weight:500;color:var(--green);">${sym}${formatNum(totalUSD * fiatRate, 2)} total</span>
+          </div>
+          ${subPayments.map(p => {
+            const d   = new Date(p.timestamp);
+            const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            const coin    = p.coin || 'BTC';
+            const coinIcon= coin === 'BTC' ? '₿' : coin === 'LN' ? '⚡' : coin;
+            return `
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--stone);">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <div style="width:28px;height:28px;border-radius:50%;background:var(--amber-pale);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;">${coinIcon}</div>
+                  <div>
+                    <div style="font-size:12px;font-weight:500;color:var(--charcoal);">${dateStr}</div>
+                    <div style="font-size:10px;color:var(--gray-text);">${p.btcAmount ? p.btcAmount.toFixed(6) + ' ' + coin : coin}</div>
+                  </div>
+                </div>
+                <div style="font-family:var(--font-display);font-size:15px;font-weight:500;color:var(--charcoal);">${sym}${formatNum(p.usd * fiatRate, 2)}</div>
+              </div>`;
+          }).join('')}
+        </div>`;
+    }
+
+    // Status + action buttons
+    const statusBadge = sub.status === 'active'
+      ? `<span style="background:var(--green-pale);color:var(--green);font-size:10px;font-weight:700;letter-spacing:0.1em;padding:3px 8px;border-radius:20px;text-transform:uppercase;">Active</span>`
+      : sub.status === 'overdue'
+      ? `<span style="background:#FEF3C7;color:#92400E;font-size:10px;font-weight:700;letter-spacing:0.1em;padding:3px 8px;border-radius:20px;text-transform:uppercase;">Overdue</span>`
+      : `<span style="background:var(--gray-mid);color:var(--gray-text);font-size:10px;font-weight:700;letter-spacing:0.1em;padding:3px 8px;border-radius:20px;text-transform:uppercase;">Canceled</span>`;
+
+    let renewalInfo = '';
+    if (sub.nextRenewal && sub.status === 'active') {
+      const d = new Date(sub.nextRenewal);
+      renewalInfo = `<span style="font-size:12px;color:var(--gray-text);">Next renewal: ${d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</span>`;
+    }
+
+    histEl.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+        ${statusBadge}
+        ${renewalInfo}
+      </div>` + histEl.innerHTML;
+  }
+
+  // Show modal
+  document.getElementById('subscriber-modal').classList.add('active');
+}
+
+function closeSubscriberModal() {
+  document.getElementById('subscriber-modal').classList.remove('active');
+}
+
+// ═══════════════════════════════════════════════════════
+// HISTORY — Section 4
+// ═══════════════════════════════════════════════════════
+function setPeriod(p) {
+  activePeriod = p;
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+  const el = document.getElementById('period-' + p);
+  if (el) el.classList.add('active');
+  renderHistory();
+}
+
+function getFilteredPayments() {
+  const query = (document.getElementById('history-search')?.value || '').toLowerCase();
+  const now   = new Date();
+
+  return payments.filter(pmt => {
+    // Period filter
+    const d = new Date(pmt.timestamp);
+    if (activePeriod === 'today') {
+      if (d.toDateString() !== now.toDateString()) return false;
+    } else if (activePeriod === 'week') {
+      const weekAgo = new Date(now); weekAgo.setDate(now.getDate() - 7);
+      if (d < weekAgo) return false;
+    } else if (activePeriod === 'month') {
+      if (d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear()) return false;
+    } else if (activePeriod === 'year') {
+      if (d.getFullYear() !== now.getFullYear()) return false;
+    }
+
+    // Search filter
+    if (query) {
+      const plan = plans.find(p => p.id === pmt.planId);
+      const sub  = subscribers.find(s => s.id === pmt.subscriberId);
+      const haystack = [
+        pmt.note || '',
+        pmt.coin || '',
+        plan ? plan.name : '',
+        sub  ? sub.email  : '',
+        String(pmt.usd),
+        String(pmt.btcAmount || ''),
+      ].join(' ').toLowerCase();
+      if (!haystack.includes(query)) return false;
+    }
+    return true;
+  }).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+}
+
+function renderHistory() {
+  const list     = document.getElementById('history-list');
+  const empty    = document.getElementById('history-empty');
+  const totalNum = document.getElementById('hist-total-num');
+  const countLbl = document.getElementById('hist-count-label');
+  if (!list) return;
+
+  const filtered = getFilteredPayments();
+  const sym      = getCurrencySymbol();
+  const total    = filtered.reduce((s, p) => s + p.usd, 0);
+
+  // Update totals
+  if (totalNum) totalNum.textContent = sym + formatNum(total * fiatRate, 2);
+  if (countLbl) {
+    const n = filtered.length;
+    countLbl.textContent = n + ' ' + (n === 1 ? (t('hist_payment_s') || 'payment') : (t('hist_payments_pl') || 'payments'));
+  }
+
+  // Remove old rows
+  list.querySelectorAll('.history-row, .history-group-header').forEach(r => r.remove());
+
+  if (filtered.length === 0) {
+    if (empty) empty.style.display = 'flex';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  // Group by date
+  const groups = {};
+  filtered.forEach(pmt => {
+    const d   = new Date(pmt.timestamp);
+    const key = d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(pmt);
+  });
+
+  Object.entries(groups).forEach(([dateLabel, pmts]) => {
+    // Date header
+    const header = document.createElement('div');
+    header.className = 'history-group-header';
+    header.style.cssText = 'padding:10px 18px 4px;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--gray-text);background:var(--warm-white);border-bottom:1px solid var(--stone);';
+    header.textContent = dateLabel;
+    list.appendChild(header);
+
+    pmts.forEach((pmt, idx) => {
+      const plan   = plans.find(p => p.id === pmt.planId);
+      const sub    = subscribers.find(s => s.id === pmt.subscriberId);
+      const planName = plan ? plan.name : 'Subscription';
+      const subEmail = sub  ? sub.email : (pmt.note || '');
+      const coin     = pmt.coin || 'BTC';
+      const coinIcon = coin === 'LN' ? '⚡' : '₿';
+      const btcStr   = pmt.btcAmount ? pmt.btcAmount.toFixed(6) + ' ' + coin : coin;
+      const d        = new Date(pmt.timestamp);
+      const timeStr  = d.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
+      const taxRate  = parseFloat(settings.taxRate) || 0;
+      const subtotal = taxRate > 0 ? pmt.usd / (1 + taxRate / 100) : pmt.usd;
+      const taxAmt   = pmt.usd - subtotal;
+
+      const row = document.createElement('div');
+      row.className = 'history-row';
+      row.style.borderBottom = idx < pmts.length - 1 ? '1px solid var(--stone)' : 'none';
+      row.innerHTML = `
+        <div class="history-coin-icon">${coinIcon}</div>
+        <div class="history-info">
+          <div class="history-plan">${escHtml(planName)}</div>
+          <div class="history-sub">${escHtml(subEmail)}${btcStr ? ' · ' + btcStr : ''}</div>
+          ${taxRate > 0 ? `<div style="font-size:10px;color:var(--gray-text);">Subtotal ${sym}${formatNum(subtotal*fiatRate,2)} · Tax ${sym}${formatNum(taxAmt*fiatRate,2)}</div>` : ''}
+        </div>
+        <div class="history-right">
+          <div class="history-amount">${sym}${formatNum(pmt.usd * fiatRate, 2)}</div>
+          <div class="history-time">${timeStr}</div>
+        </div>
+        <button class="history-delete" onclick="deletePayment('${pmt.id}')" title="Delete">✕</button>`;
+      list.appendChild(row);
+    });
+  });
+}
+
+function deletePayment(pmtId) {
+  showConfirm(
+    'Delete this payment?',
+    'This only affects your local records — it has no effect on the blockchain.',
+    'Delete',
+    () => {
+      payments = payments.filter(p => p.id !== pmtId);
+      savePaymentsToStorage();
+      renderHistory();
+      renderHome();
+      showToast('Entry deleted');
+    }
+  );
+}
+
+function clearAllHistory() {
+  if (payments.length === 0) { showToast(t('toast_no_payments')); return; }
+  showConfirm(
+    'Clear all payment history?',
+    'This cannot be undone. Export a CSV backup first if you need records.',
+    'Clear All',
+    () => {
+      payments = [];
+      savePaymentsToStorage();
+      renderHistory();
+      renderHome();
+      showToast(t('toast_history_cleared'));
+    }
+  );
+}
+
+// ═══════════════════════════════════════════════════════
+// CSV / KOINLY EXPORT — Section 4
+// ═══════════════════════════════════════════════════════
+function openCSVRangeModal(type) {
+  csvExportType = type;
+  // Reset date fields
+  document.getElementById('csv-range-from').value = '';
+  document.getElementById('csv-range-to').value   = '';
+  document.getElementById('csv-range-modal').classList.add('active');
+}
+
+function closeCSVRangeModal() {
+  document.getElementById('csv-range-modal').classList.remove('active');
+}
+
+function confirmCSVExport(allTime = false) {
+  closeCSVRangeModal();
+
+  let filtered = payments;
+  let suffix   = new Date().toISOString().slice(0, 10);
+
+  if (!allTime) {
+    const fromStr = document.getElementById('csv-range-from').value;
+    const toStr   = document.getElementById('csv-range-to').value;
+    if (fromStr || toStr) {
+      const from = fromStr ? new Date(fromStr + 'T00:00:00') : null;
+      const to   = toStr   ? new Date(toStr   + 'T23:59:59') : null;
+      filtered   = payments.filter(p => {
+        const d = new Date(p.timestamp);
+        if (from && d < from) return false;
+        if (to   && d > to)   return false;
+        return true;
+      });
+      suffix = fromStr && toStr ? fromStr + '-to-' + toStr : suffix;
+    }
+    if (filtered.length === 0) { showToast(t('toast_no_payments')); return; }
+  } else {
+    if (filtered.length === 0) { showToast(t('toast_no_payments')); return; }
+    suffix = 'all';
+  }
+
+  if (csvExportType === 'koinly') {
+    exportKoinlyCSV(filtered, suffix);
+  } else {
+    exportCSV(filtered, suffix);
+  }
+}
+
+function exportCSV(filteredPayments, suffix) {
+  const cur        = settings.currency || 'USD';
+  const zeroDecimal= ['JPY','KRW','CLP','COP','VES','NGN'].includes(cur);
+  const decimals   = zeroDecimal ? 0 : 2;
+  const fmt        = val => (val * fiatRate).toFixed(decimals);
+  const taxRate    = parseFloat(settings.taxRate) || 0;
+
+  const rows = [['Date','Time','Plan','Subscriber','Total ' + cur,'Subtotal ' + cur,'Tax Amount ' + cur,'Tax Rate %','Coin','BTC Amount','Note']];
+
+  filteredPayments.forEach(p => {
+    const d        = new Date(p.timestamp);
+    const plan     = plans.find(pl => pl.id === p.planId);
+    const sub      = subscribers.find(s => s.id === p.subscriberId);
+    const subtotal = taxRate > 0 ? p.usd / (1 + taxRate / 100) : p.usd;
+    const taxAmt   = taxRate > 0 ? p.usd - subtotal : 0;
+    rows.push([
+      d.toLocaleDateString('en-US'),
+      d.toLocaleTimeString('en-US'),
+      plan ? plan.name  : '',
+      sub  ? sub.email  : '',
+      fmt(p.usd),
+      fmt(subtotal),
+      taxAmt > 0 ? fmt(taxAmt) : '',
+      taxRate > 0 ? taxRate : '',
+      p.coin || 'BTC',
+      p.btcAmount != null ? p.btcAmount : '',
+      p.note || '',
+    ]);
+  });
+
+  downloadCSV(rows, 'ricorra-payments-' + suffix + '.csv');
+  showToast('CSV exported!');
+}
+
+function exportKoinlyCSV(filteredPayments, suffix) {
+  // Koinly native import format
+  const rows = [['Date','Received Amount','Received Currency','Net Worth Amount','Net Worth Currency','Label','Description']];
+
+  filteredPayments.forEach(p => {
+    const d       = new Date(p.timestamp);
+    const dateStr = d.toISOString().replace('T',' ').slice(0,19);
+    const plan    = plans.find(pl => pl.id === p.planId);
+    const sub     = subscribers.find(s => s.id === p.subscriberId);
+    const desc    = [plan ? plan.name : '', sub ? sub.email : '', p.note || ''].filter(Boolean).join(' · ') || 'Ricorra subscription';
+    const taxRate = parseFloat(settings.taxRate) || 0;
+    const netWorth= taxRate > 0 ? (p.usd / (1 + taxRate / 100)).toFixed(2) : p.usd.toFixed(2);
+
+    rows.push([
+      dateStr,
+      p.btcAmount != null ? p.btcAmount : p.usd.toFixed(2),
+      p.coin || 'BTC',
+      netWorth,
+      'USD',
+      'income',
+      desc,
+    ]);
+  });
+
+  downloadCSV(rows, 'ricorra-koinly-' + suffix + '.csv');
+  showToast('Koinly CSV exported!');
+}
+
+function downloadCSV(rows, filename) {
+  const csv  = rows.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ═══════════════════════════════════════════════════════
+// FAQ TOGGLE
+// ═══════════════════════════════════════════════════════
+function toggleFaq(el) {
+  const item = el.closest('.faq-item');
+  item.classList.toggle('open');
+}
+
+// ═══════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════
+let toastTimeout;
+function showToast(msg, duration = 2500) {
+  const el = document.getElementById('toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => el.classList.remove('show'), duration);
+}
+
+// ═══════════════════════════════════════════════════════
+// LOGIN — Enter key support
+// ═══════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  const loginInput = document.getElementById('login-email-input');
+  if (loginInput) {
+    loginInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') requestMagicLink();
+    });
+  }
+
+  // Plan modal — Enter to save, backdrop to close
+  const planModal = document.getElementById('plan-modal');
+  if (planModal) {
+    planModal.addEventListener('click', e => {
+      if (e.target === planModal) closePlanModal();
+    });
+  }
+  ['plan-name-input','plan-price-input','plan-desc-input'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter') savePlan(); });
+  });
+
+  // CSV modal backdrop
+  const csvModal = document.getElementById('csv-range-modal');
+  if (csvModal) csvModal.addEventListener('click', e => { if (e.target === csvModal) closeCSVRangeModal(); });
+
+  // Subscriber modal backdrop
+  const subModal = document.getElementById('subscriber-modal');
+  if (subModal) subModal.addEventListener('click', e => { if (e.target === subModal) closeSubscriberModal(); });
+  // Digest email row visibility
+  const digestToggle = document.getElementById('digest-toggle');
+  if (digestToggle) {
+    digestToggle.addEventListener('change', () => {
+      const row = document.getElementById('digest-email-row');
+      if (row) row.style.display = digestToggle.checked ? 'block' : 'none';
+    });
+  }
+});
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+// SECTION 5 — SYNC, WALLET VALIDATION, APPLY SETTINGS,
+//             PWA INSTALL PROMPT, MISC POLISH
+// ═══════════════════════════════════════════════════════
+
+// ── MULTI-DEVICE SYNC ──
+// Push plans + subscribers + payments up to the Worker KV
+async function syncPush() {
+  const token = getSessionToken();
+  if (!token) return;
+  try {
+    const payload = {
+      plans,
+      subscribers,
+      payments,
+      pushedAt: new Date().toISOString(),
+    };
+    // Strip auth fields from payload before pushing
+    const clean = JSON.parse(JSON.stringify(payload));
+    await fetch(API_BASE + '/merchant/sync', {
+      method:  'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': 'Bearer ' + token,
+      },
+      body: JSON.stringify(clean),
+    });
+  } catch(e) { /* silent — local data always wins on failure */ }
+}
+
+// Pull from Worker KV and merge (server wins on conflicts)
+async function syncPull() {
+  const token = getSessionToken();
+  if (!token) return;
+  try {
+    const res = await fetch(API_BASE + '/merchant/sync', {
+      headers: { 'Authorization': 'Bearer ' + token },
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+
+    // Preserve locally-set auth fields, then merge server data
+    const savedEmail  = settings.email;
+    const savedToken  = getSessionToken();
+
+    if (data.plans)       { plans       = data.plans;       savePlansToStorage(); }
+    if (data.subscribers) { subscribers = data.subscribers; saveSubscribersToStorage(); }
+    if (data.payments)    { payments    = data.payments;     savePaymentsToStorage(); }
+
+    // Re-apply any server-side profile fields without clobbering local auth
+    if (data.settings) {
+      settings = { ...settings, ...data.settings };
+      settings.email = savedEmail; // never overwrite from server
+      saveSettingsToStorage();
+    }
+
+    // Re-render everything
+    renderHome();
+    renderPlans();
+    renderSubscribers();
+    renderHistory();
+  } catch(e) {}
+}
+
+// Auto-sync: push after every data mutation, pull on app focus
+function setupSync() {
+  // Pull fresh data when user returns to tab
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && getSessionToken()) {
+      syncPull();
+    }
+  });
+}
+
+// ── WALLET ADDRESS VALIDATION ──
+function validateBTCAddress(addr) {
+  if (!addr) return null;
+  const a = addr.trim();
+  // Bech32 (native segwit): bc1q… or bc1p… (taproot)
+  if (/^bc1[a-z0-9]{25,62}$/i.test(a)) return 'valid';
+  // Legacy: 1…
+  if (/^1[a-km-zA-HJ-NP-Z1-9]{25,34}$/.test(a)) return 'valid';
+  // P2SH: 3…
+  if (/^3[a-km-zA-HJ-NP-Z1-9]{25,34}$/.test(a)) return 'valid';
+  return 'invalid';
+}
+
+function validateLightningAddress(addr) {
+  if (!addr) return null;
+  // Lightning address format: user@domain.tld
+  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(addr.trim()) ? 'valid' : 'invalid';
+}
+
+function setupWalletValidation() {
+  const btcInput = document.getElementById('settings-btc-wallet');
+  const lnInput  = document.getElementById('settings-lightning-addr');
+
+  if (btcInput) {
+    const hint = btcInput.nextElementSibling; // the settings-hint div
+    btcInput.addEventListener('input', () => {
+      const val    = btcInput.value.trim();
+      const result = validateBTCAddress(val);
+      if (!val) {
+        btcInput.style.borderColor = '';
+        if (hint) hint.style.color = '';
+        return;
+      }
+      if (result === 'valid') {
+        btcInput.style.borderColor = 'var(--green)';
+        if (hint) { hint.textContent = 'Address looks valid ✓'; hint.style.color = 'var(--green)'; }
+      } else {
+        btcInput.style.borderColor = 'var(--red)';
+        if (hint) { hint.textContent = 'Address format unrecognised — double-check'; hint.style.color = 'var(--red)'; }
+      }
+    });
+  }
+
+  if (lnInput) {
+    const hint = lnInput.nextElementSibling;
+    lnInput.addEventListener('input', () => {
+      const val    = lnInput.value.trim();
+      const result = validateLightningAddress(val);
+      if (!val) {
+        lnInput.style.borderColor = '';
+        if (hint) { hint.style.color = ''; hint.textContent = t('hint_lightning_addr') || 'Enables instant Lightning Network payments. Format: name@domain.com'; }
+        return;
+      }
+      if (result === 'valid') {
+        lnInput.style.borderColor = 'var(--green)';
+        if (hint) { hint.textContent = 'Lightning address looks valid ✓'; hint.style.color = 'var(--green)'; }
+      } else {
+        lnInput.style.borderColor = 'var(--red)';
+        if (hint) { hint.textContent = 'Format should be name@domain.com'; hint.style.color = 'var(--red)'; }
+      }
+    });
+  }
+}
+
+// ── APPLY SETTINGS (after load — populates all fields) ──
+function applySettings() {
+  // Dark mode
+  if (settings.darkMode) {
+    document.body.classList.add('dark-mode');
+    const toggle = document.getElementById('dark-mode-toggle');
+    if (toggle) toggle.checked = true;
+  } else {
+    document.body.classList.remove('dark-mode');
+    const toggle = document.getElementById('dark-mode-toggle');
+    if (toggle) toggle.checked = false;
+  }
+
+  // Wallet fields
+  const btcEl   = document.getElementById('settings-btc-wallet');
+  const lnEl    = document.getElementById('settings-lightning-addr');
+  const nameEl  = document.getElementById('settings-display-name');
+  const emailEl = document.getElementById('settings-email');
+  const taxEl   = document.getElementById('settings-tax-rate');
+  if (btcEl)   btcEl.value   = settings.btcWallet    || '';
+  if (lnEl)    lnEl.value    = settings.lightningAddr || '';
+  if (nameEl)  nameEl.value  = settings.displayName   || '';
+  if (emailEl) emailEl.value = settings.email         || '';
+  if (taxEl)   taxEl.value   = settings.taxRate       || '';
+
+  // Digest toggle + email
+  const digestToggle = document.getElementById('digest-toggle');
+  const digestRow    = document.getElementById('digest-email-row');
+  const digestEmail  = document.getElementById('digest-email-input');
+  if (digestToggle) digestToggle.checked = settings.digestEnabled || false;
+  if (digestRow)    digestRow.style.display = settings.digestEnabled ? 'block' : 'none';
+  if (digestEmail)  digestEmail.value = settings.digestEmail || '';
+
+  // Language selector
+  const langSel = document.getElementById('language-select');
+  if (langSel && settings.language) langSel.value = settings.language;
+
+  // Currency pills
+  renderCurrencyPills();
+
+  // Apply language if non-English
+  if (settings.language && settings.language !== 'en') applyLanguage();
+}
+
+// ── PWA INSTALL PROMPT ──
+let deferredInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  showInstallBanner();
+});
+
+function showInstallBanner() {
+  if (document.getElementById('pwa-install-banner')) return; // already showing
+  const banner = document.createElement('div');
+  banner.id = 'pwa-install-banner';
+  banner.style.cssText = [
+    'position:fixed;top:0;left:50%;transform:translateX(-50%)',
+    'width:100%;max-width:480px;z-index:50',
+    'background:var(--charcoal);color:var(--parchment)',
+    'padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px',
+    'box-shadow:0 4px 16px rgba(0,0,0,0.3)',
+  ].join(';');
+  banner.innerHTML = `
+    <div>
+      <div style="font-size:13px;font-weight:600;">Add Ricorra to your home screen</div>
+      <div style="font-size:11px;opacity:0.7;margin-top:2px;">For the best experience, install the app.</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-shrink:0;">
+      <button onclick="installPWA()" style="background:var(--amber);color:white;border:none;border-radius:8px;padding:7px 14px;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;">Install</button>
+      <button onclick="dismissInstallBanner()" style="background:none;border:1px solid rgba(255,255,255,0.3);color:var(--parchment);border-radius:8px;padding:7px 10px;font-family:var(--font-ui);font-size:12px;cursor:pointer;">Not now</button>
+    </div>`;
+  document.body.prepend(banner);
+}
+
+async function installPWA() {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  const { outcome } = await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  dismissInstallBanner();
+  if (outcome === 'accepted') showToast('Ricorra installed! 🎉');
+}
+
+function dismissInstallBanner() {
+  document.getElementById('pwa-install-banner')?.remove();
+  // Remember dismissal for 7 days
+  try { localStorage.setItem('ricorra_install_dismissed', Date.now()); } catch(e) {}
+}
+
+// ── TOPBAR GREETING (shows display name when set) ──
+function updateTopbarGreeting() {
+  const wordmark = document.querySelector('.topbar-wordmark');
+  if (!wordmark) return;
+  if (settings.displayName) {
+    wordmark.innerHTML = `ricorra <span style="font-size:13px;font-weight:300;color:var(--gray-text);font-family:var(--font-ui);letter-spacing:0;">&nbsp;· ${escHtml(settings.displayName)}</span>`;
+  } else {
+    wordmark.textContent = 'ricorra';
+  }
+}
+
+// ── BITCOIN PRICE DISPLAY HELPER (topbar badge hover) ──
+function updateRateLabel() {
+  updateRateBadge(); // already defined — alias for clarity
+}
+
+// ── LOGOUT: clear all local data option ──
+function logoutAndClear() {
+  showConfirm(
+    'Sign out and clear local data?',
+    'Your payment history, plans, and subscribers will be removed from this device. Cloud data is unaffected.',
+    'Clear & Sign Out',
+    async () => {
+      try { localStorage.clear(); } catch(e) {}
+      const token = getSessionToken();
+      if (token) {
+        try {
+          await fetch(API_BASE + '/auth/logout', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token },
+          });
+        } catch(e) {}
+      }
+      location.reload();
+    }
+  );
+}
+
+// ── SUBTLE HAPTIC FEEDBACK (where supported) ──
+function haptic(type = 'light') {
+  try {
+    if (navigator.vibrate) {
+      navigator.vibrate(type === 'light' ? 8 : type === 'medium' ? 20 : 40);
+    }
+  } catch(e) {}
+}
+
+// ── COPY WITH HAPTIC ──
+function copyToClipboard(text, successMsg) {
+  haptic('light');
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(text)
+      .then(() => showToast(successMsg || t('toast_copied')))
+      .catch(() => copyFallback(text, successMsg));
+  } else {
+    copyFallback(text, successMsg);
+  }
+}
+
+function copyFallback(text, successMsg) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
+  document.body.appendChild(ta);
+  ta.focus(); ta.select();
+  try { document.execCommand('copy'); showToast(successMsg || t('toast_copied')); } catch(e) {}
+  document.body.removeChild(ta);
+}
+
+// ── FORMAT CURRENCY (helper used across screens) ──
+function formatCurrency(usdAmount) {
+  return getCurrencySymbol() + formatNum(usdAmount * fiatRate, 2);
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT — Section 5 final wiring
+// ═══════════════════════════════════════════════════════
+function init() {
+  loadSettings();
+  loadPayments();
+  loadPlans();
+  loadSubscribers();
+
+  // Apply all settings immediately (dark mode, fields, language, currency)
+  applySettings();
+
+  // Wire up wallet address validation
+  setupWalletValidation();
+
+  // Set up sync listeners
+  setupSync();
+
+  // Check if install banner was recently dismissed
+  try {
+    const dismissed = parseInt(localStorage.getItem('ricorra_install_dismissed') || '0');
+    if (dismissed && Date.now() - dismissed < 7 * 86400000) {
+      deferredInstallPrompt = null; // won't show banner even if prompt fires
+    }
+  } catch(e) {}
+
+  // Online/offline detection
+  window.addEventListener('offline', () => {
+    setRateBadgeOffline();
+  });
+  window.addEventListener('online', () => {
+    fetchRates();
+    showToast(t('toast_back_online'));
+  });
+
+  // Check auth, then fetch rates and sync
+  checkSession().then(() => {
+    fetchRates();
+    setInterval(fetchRates, 60000);
+    // Pull fresh data from server after brief delay (don't block render)
+    setTimeout(() => syncPull(), 2000);
+  });
+}
+
+window.addEventListener('load', init);
+</script>
+</body>
+</html>
