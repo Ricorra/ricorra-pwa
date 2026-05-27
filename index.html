@@ -3409,7 +3409,7 @@ function deletePlan(planId) {
 function copyShareLink(planId) {
   const plan = plans.find(p => p.id === planId);
   if (!plan) return;
-  const url = 'https://ricorra.io/pay/' + plan.shareToken;
+  const url = 'https://ricorra.io/pay?t=' + plan.shareToken;
   if (navigator.clipboard?.writeText) {
     navigator.clipboard.writeText(url).then(() => showToast(t('toast_copied')));
   } else {
@@ -3427,7 +3427,7 @@ function copyShareLink(planId) {
 function openShareSheet(planId) {
   const plan = plans.find(p => p.id === planId);
   if (!plan) return;
-  const url  = 'https://ricorra.io/pay/' + plan.shareToken;
+  const url  = 'https://ricorra.io/pay?t=' + plan.shareToken;
   const text = 'Subscribe to ' + plan.name + ': ' + url;
   if (navigator.share) {
     navigator.share({ title: plan.name, text, url }).catch(() => {});
@@ -3465,7 +3465,7 @@ function renderPlans() {
       ? (plan.priceUSD / 12) * activeSubs
       : plan.priceUSD * activeSubs;
     const priceLabel  = sym + formatNum(plan.priceUSD * fiatRate, 2) + ' / ' + (t('plan_' + plan.interval) || plan.interval);
-    const shareUrl    = 'https://ricorra.io/pay/' + (plan.shareToken || '');
+    const shareUrl    = 'https://ricorra.io/pay?t=' + (plan.shareToken || '');
 
     const badgeClass  = plan.status === 'active' ? 'active' : plan.status === 'paused' ? 'paused' : 'archived';
     const badgeLabel  = t('badge_' + plan.status) || plan.status;

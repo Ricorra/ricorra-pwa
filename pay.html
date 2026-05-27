@@ -779,7 +779,7 @@ body {
 'use strict';
 
 const API_BASE   = 'https://ricorra.io';
-const shareToken = location.pathname.split('/pay/')[1] || '';
+const shareToken = new URLSearchParams(location.search).get('t') || '';
 
 let planData     = null;
 let btcRate      = 0;
@@ -794,7 +794,7 @@ async function init() {
 
   // Fetch plan data from Worker
   try {
-    const res  = await fetch(API_BASE + '/pay/' + shareToken, {
+    const res  = await fetch(API_BASE + '/pay?t=' + shareToken, {
       headers: { 'Accept': 'application/json' },
     });
     if (!res.ok) {
