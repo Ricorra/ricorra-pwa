@@ -116,21 +116,21 @@ async function handleRequest(request, env) {
     const token = url.searchParams.get('token');
 
     if (!token) {
-      return Response.redirect('https://ricorra.io/login?error=missing_token', 302);
+      return Response.redirect('https://ricorra.io/?error=missing_token', 302);
     }
 
     let record;
     try {
       const raw = await env.DB.get(`magiclink:${token}`);
-      if (!raw) return Response.redirect('https://ricorra.io/login?error=invalid_token', 302);
+      if (!raw) return Response.redirect('https://ricorra.io/?error=invalid_token', 302);
       record = JSON.parse(raw);
     } catch {
-      return Response.redirect('https://ricorra.io/login?error=invalid_token', 302);
+      return Response.redirect('https://ricorra.io/?error=invalid_token', 302);
     }
 
     if (Date.now() > record.expires) {
       await env.DB.delete(`magiclink:${token}`);
-      return Response.redirect('https://ricorra.io/login?error=expired_token', 302);
+      return Response.redirect('https://ricorra.io/?error=expired_token', 302);
     }
 
     await env.DB.delete(`magiclink:${token}`);
@@ -142,9 +142,9 @@ async function handleRequest(request, env) {
       { expirationTtl: 60 * 60 * 24 * 30 }
     );
 
-    // Redirect to dashboard with session token in hash — never hits the server
+    // Redirect to root with session token in hash — index.html reads it client-side
     return Response.redirect(
-      `https://ricorra.io/dashboard#session=${sessionToken}`,
+      `https://ricorra.io/#session=${sessionToken}`,
       302
     );
   }
@@ -168,7 +168,6 @@ async function handleRequest(request, env) {
     const email = await getEmailFromSession(request, env);
     if (!email) return json({ error: 'Unauthorized' }, 401);
 
-    // Load wallet address if set
     let walletAddress = null;
     try {
       const raw = await env.DB.get(`merchant:${email}:wallet`);
@@ -177,7 +176,6 @@ async function handleRequest(request, env) {
       walletAddress = null;
     }
 
-    // Load display name if set
     let displayName = null;
     try {
       const raw = await env.DB.get(`merchant:${email}:profile`);
@@ -239,7 +237,6 @@ async function handleRequest(request, env) {
       return json({ error: 'Wallet address required' }, 400);
     }
 
-    // Basic Bitcoin address sanity check (starts with 1, 3, or bc1)
     if (!/^(1|3|bc1)[a-zA-Z0-9]{8,}$/.test(address)) {
       return json({ error: 'Invalid Bitcoin wallet address' }, 400);
     }
@@ -250,6 +247,45 @@ async function handleRequest(request, env) {
     );
 
     return json({ success: true, address });
+  }
+
+  // ── GET /merchant/sync ───────────────────────────────
+  if (method === 'GET' && url.pathname === '/merchant/sync') {
+    const email = await getEmailFromSession(request, env);
+    if (!email) return json({ error: 'Unauthorized' }, 401);
+
+    try {
+      const raw = await env.DB.get(`merchant:${email}:sync`);
+      if (!raw) return json({ plans: [], subscribers: [], payments: [] });
+      return json(JSON.parse(raw));
+    } catch {
+      return json({ plans: [], subscribers: [], payments: [] });
+    }
+  }
+
+  // ── POST /merchant/sync ──────────────────────────────
+  if (method === 'POST' && url.pathname === '/merchant/sync') {
+    const email = await getEmailFromSession(request, env);
+    if (!email) return json({ error: 'Unauthorized' }, 401);
+
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return json({ error: 'Invalid JSON' }, 400);
+    }
+
+    await env.DB.put(
+      `merchant:${email}:sync`,
+      JSON.stringify({
+        plans:       body.plans       || [],
+        subscribers: body.subscribers || [],
+        payments:    body.payments    || [],
+        pushedAt:    body.pushedAt    || new Date().toISOString(),
+      })
+    );
+
+    return json({ success: true });
   }
 
   // ── 404 ──────────────────────────────────────────────
