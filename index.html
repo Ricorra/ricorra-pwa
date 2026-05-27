@@ -3342,9 +3342,11 @@ function savePlan() {
   renderHome();
   showToast(t('toast_plan_saved'));
 
-  // Push plan to Worker so /pay/{shareToken} works
-  const newPlan = plans.find(p => p.shareToken === (id ? plans.find(pl => pl.id === id)?.shareToken : plans[plans.length-1]?.shareToken));
-  if (newPlan) pushPlanToWorker(newPlan);
+  // Push plan to Worker so /pay?t= works
+  const savedPlan = id
+    ? plans.find(p => p.id === id)
+    : plans[plans.length - 1];
+  if (savedPlan) pushPlanToWorker(savedPlan);
 }
 
 // Push a single plan to Worker KV so /pay/{shareToken} works
