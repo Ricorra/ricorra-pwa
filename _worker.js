@@ -288,6 +288,84 @@ async function handleRequest(request, env) {
     return json({ success: true });
   }
 
+  // ── POST /merchant/plans ─────────────────────────────
+  // Called when a merchant creates or updates a plan — stores
+  // plan data under plan:{shareToken} so /pay/ can look it up
+  if (method === 'POST' && url.pathname === '/merchant/plans') {
+    const email = await getEmailFromSession(request, env);
+    if (!email) return json({ error: 'Unauthorized' }, 401);
+
+    let body;
+    try { body = await request.json(); } catch {
+      return json({ error: 'Invalid JSON' }, 400);
+    }
+
+    const { id, name, priceUSD, interval, desc, status, shareToken } = body;
+    if (!name || !priceUSD || !shareToken) {
+      return json({ error: 'name, priceUSD, and shareToken are required' }, 400);
+    }
+
+    await env.DB.put(
+      `plan:${shareToken}`,
+      JSON.stringify({
+        id, name, priceUSD, interval, desc, status,
+        merchantEmail: email,
+        updatedAt: Date.now(),
+      })
+    );
+
+    return json({ success: true });
+  }
+
+  // ── GET /pay/:shareToken (public — no auth) ─────────
+  if (method === 'GET' && url.pathname.startsWith('/pay/')) {
+    const shareToken = url.pathname.split('/pay/')[1] || '';
+    if (!shareToken) return json({ error: 'Invalid payment link' }, 400);
+
+    try {
+      const raw = await env.DB.get(`plan:${shareToken}`);
+      if (!raw) return json({ error: 'Plan not found' }, 404);
+
+      const record = JSON.parse(raw);
+
+      // Don't serve paused or archived plans
+      if (record.status === 'paused')   return json({ error: 'Plan paused' }, 403);
+      if (record.status === 'archived') return json({ error: 'Plan not found' }, 404);
+
+      // Load merchant wallet + display name
+      const email = record.merchantEmail;
+      let walletAddress   = null;
+      let lightningAddress = null;
+      let merchantName    = null;
+
+      try {
+        const w = await env.DB.get(`merchant:${email}:wallet`);
+        if (w) walletAddress = JSON.parse(w).address;
+      } catch {}
+
+      try {
+        const p = await env.DB.get(`merchant:${email}:profile`);
+        if (p) {
+          const prof = JSON.parse(p);
+          merchantName     = prof.displayName || null;
+          lightningAddress = prof.lightningAddress || null;
+        }
+      } catch {}
+
+      return json({
+        planName:        record.name,
+        planDesc:        record.desc     || '',
+        priceUSD:        record.priceUSD,
+        interval:        record.interval,
+        merchantName:    merchantName    || '',
+        walletAddress:   walletAddress   || '',
+        lightningAddress: lightningAddress || '',
+      });
+    } catch(e) {
+      return json({ error: 'Internal error' }, 500);
+    }
+  }
+
   // ── 404 ──────────────────────────────────────────────
   return json({ error: 'Not found' }, 404);
 }
