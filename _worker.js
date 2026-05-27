@@ -114,20 +114,23 @@ async function handleRequest(request, env) {
   // ── GET /auth/verify ─────────────────────────────────
   if (method === 'GET' && url.pathname === '/auth/verify') {
     const token = url.searchParams.get('token');
-    if (!token) return json({ error: 'Token required' }, 400);
+
+    if (!token) {
+      return Response.redirect('https://ricorra.com/?error=missing_token', 302);
+    }
 
     let record;
     try {
       const raw = await env.DB.get(`magiclink:${token}`);
-      if (!raw) return json({ error: 'Invalid or expired token' }, 401);
+      if (!raw) return Response.redirect('https://ricorra.com/?error=invalid_token', 302);
       record = JSON.parse(raw);
     } catch {
-      return json({ error: 'Invalid token data' }, 500);
+      return Response.redirect('https://ricorra.com/?error=invalid_token', 302);
     }
 
     if (Date.now() > record.expires) {
       await env.DB.delete(`magiclink:${token}`);
-      return json({ error: 'Token expired' }, 401);
+      return Response.redirect('https://ricorra.com/?error=expired_token', 302);
     }
 
     await env.DB.delete(`magiclink:${token}`);
@@ -139,7 +142,11 @@ async function handleRequest(request, env) {
       { expirationTtl: 60 * 60 * 24 * 30 }
     );
 
-    return json({ success: true, sessionToken, email: record.email });
+    // Redirect to dashboard with session token in hash — never hits the server
+    return Response.redirect(
+      `https://ricorra.com/dashboard#session=${sessionToken}`,
+      302
+    );
   }
 
   // ── POST /auth/logout ────────────────────────────────
