@@ -379,6 +379,19 @@
   .notice.success { color: var(--success); background: var(--success-bg); border: 1px solid #95D5B2; }
   .notice.error   { color: var(--error);   background: var(--error-bg);   border: 1px solid #FECACA; }
 
+  /* ── NAME CARD ── */
+  .name-form { display: block; }
+  .name-form.hidden { display: none; }
+  .name-set { display: none; align-items: center; gap: 12px; }
+  .name-set.visible { display: flex; }
+  .name-display {
+    font-family: "Cormorant Garamond", serif;
+    font-size: 20px;
+    font-weight: 400;
+    color: var(--charcoal);
+    flex: 1;
+  }
+
   /* ── COMING SOON CARD ── */
   .coming-soon {
     display: flex;
@@ -464,7 +477,43 @@
 
   <div class="page-header">
     <div class="page-eyebrow">Merchant Dashboard</div>
-    <div class="page-title">Good to see you, <em id="firstName">there</em>.</div>
+    <div class="page-title" id="pageTitle">Good to see you, <em id="firstName">you</em>.</div>
+  </div>
+
+  <!-- DISPLAY NAME CARD -->
+  <div class="card" id="nameCard">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Your Name</div>
+        <div class="card-sub">How you would like to be greeted</div>
+      </div>
+      <div class="card-icon">✦</div>
+    </div>
+
+    <!-- Name set -->
+    <div class="name-set" id="nameSet">
+      <div class="name-display" id="nameDisplay"></div>
+      <button class="btn-edit" onclick="showNameForm()">Edit</button>
+    </div>
+
+    <!-- Name form -->
+    <div class="name-form" id="nameForm">
+      <label class="form-label" for="nameInput">Display name</label>
+      <input
+        class="form-input"
+        type="text"
+        id="nameInput"
+        placeholder="e.g. Sarah"
+        maxlength="50"
+        autocomplete="off"
+        style="font-family: DM Sans, sans-serif;"
+      >
+      <button class="btn-primary" id="nameBtn" onclick="saveName()">
+        Save Name
+      </button>
+    </div>
+
+    <div class="notice" id="nameNotice"></div>
   </div>
 
   <!-- ACCOUNT CARD -->
@@ -590,8 +639,16 @@
     // Nav
     document.getElementById('navEmail').textContent = email;
 
-    // Simple greeting — don't guess names from emails
-    document.getElementById('firstName').textContent = 'you';
+    // Greeting — use display name if set
+    const { displayName } = data;
+    if (displayName) {
+      document.getElementById('firstName').textContent = displayName;
+      document.getElementById('nameDisplay').textContent = displayName;
+      document.getElementById('nameSet').classList.add('visible');
+      document.getElementById('nameForm').classList.add('hidden');
+    } else {
+      document.getElementById('firstName').textContent = 'you';
+    }
 
     // Account card
     document.getElementById('accountEmail').textContent = email;
@@ -602,6 +659,56 @@
       document.getElementById('walletAddressDisplay').textContent = walletAddress;
       document.getElementById('walletDisplay').classList.add('visible');
       document.getElementById('walletForm').classList.add('hidden');
+    }
+  }
+
+  // ── Name ─────────────────────────────────────────────
+  function showNameForm() {
+    document.getElementById('nameSet').classList.remove('visible');
+    document.getElementById('nameForm').classList.remove('hidden');
+    document.getElementById('nameInput').focus();
+  }
+
+  async function saveName() {
+    const btn    = document.getElementById('nameBtn');
+    const input  = document.getElementById('nameInput');
+    const notice = document.getElementById('nameNotice');
+    const name   = input.value.trim();
+
+    notice.className = 'notice';
+    if (!name) {
+      showNotice('nameNotice', 'error', 'Please enter a display name.');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
+    try {
+      const res = await fetch('/merchant/profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionToken}`
+        },
+        body: JSON.stringify({ displayName: name })
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to save name.');
+
+      // Update greeting and card
+      document.getElementById('firstName').textContent = data.displayName;
+      document.getElementById('nameDisplay').textContent = data.displayName;
+      document.getElementById('nameSet').classList.add('visible');
+      document.getElementById('nameForm').classList.add('hidden');
+      showNotice('nameNotice', 'success', 'Display name saved.');
+
+    } catch (err) {
+      showNotice('nameNotice', 'error', err.message || 'Something went wrong.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Save Name';
     }
   }
 
@@ -683,6 +790,13 @@
     screen.classList.add('hidden');
     setTimeout(() => screen.remove(), 400);
   }
+
+  // Enter key support for name input
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('nameInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') saveName();
+    });
+  });
 
   // ── Start ─────────────────────────────────────────────
   boot();
