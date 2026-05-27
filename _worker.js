@@ -322,21 +322,28 @@ async function handleRequest(request, env) {
     const shareToken = url.pathname.split('/pay/')[1] || '';
     if (!shareToken) return json({ error: 'Invalid payment link' }, 400);
 
+    const accept = request.headers.get('Accept') || '';
+    const isAPIRequest = accept.includes('application/json') || url.searchParams.has('json');
+
+    // Browser navigation → serve the pay.html static asset
+    if (!isAPIRequest) {
+      return env.ASSETS.fetch(new Request(new URL('/pay.html', request.url), request));
+    }
+
+    // API fetch from pay.html → return plan data as JSON
     try {
       const raw = await env.DB.get(`plan:${shareToken}`);
       if (!raw) return json({ error: 'Plan not found' }, 404);
 
       const record = JSON.parse(raw);
 
-      // Don't serve paused or archived plans
       if (record.status === 'paused')   return json({ error: 'Plan paused' }, 403);
       if (record.status === 'archived') return json({ error: 'Plan not found' }, 404);
 
-      // Load merchant wallet + display name
       const email = record.merchantEmail;
-      let walletAddress   = null;
+      let walletAddress    = null;
       let lightningAddress = null;
-      let merchantName    = null;
+      let merchantName     = null;
 
       try {
         const w = await env.DB.get(`merchant:${email}:wallet`);
@@ -347,18 +354,18 @@ async function handleRequest(request, env) {
         const p = await env.DB.get(`merchant:${email}:profile`);
         if (p) {
           const prof = JSON.parse(p);
-          merchantName     = prof.displayName || null;
-          lightningAddress = prof.lightningAddress || null;
+          merchantName     = prof.displayName      || null;
+          lightningAddress = prof.lightningAddress  || null;
         }
       } catch {}
 
       return json({
-        planName:        record.name,
-        planDesc:        record.desc     || '',
-        priceUSD:        record.priceUSD,
-        interval:        record.interval,
-        merchantName:    merchantName    || '',
-        walletAddress:   walletAddress   || '',
+        planName:         record.name,
+        planDesc:         record.desc     || '',
+        priceUSD:         record.priceUSD,
+        interval:         record.interval,
+        merchantName:     merchantName    || '',
+        walletAddress:    walletAddress   || '',
         lightningAddress: lightningAddress || '',
       });
     } catch(e) {
