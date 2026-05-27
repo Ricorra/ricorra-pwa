@@ -542,6 +542,17 @@
 
   // ── Boot ──────────────────────────────────────────────
   async function boot() {
+    // Check if session token arrived via hash from magic link redirect
+    const hash = window.location.hash;
+    if (hash.startsWith('#session=')) {
+      const tokenFromHash = hash.slice(9);
+      if (tokenFromHash) {
+        localStorage.setItem(SESSION_KEY, tokenFromHash);
+        // Clean the hash from the URL without triggering a reload
+        history.replaceState(null, '', '/dashboard');
+      }
+    }
+
     sessionToken = localStorage.getItem(SESSION_KEY);
 
     if (!sessionToken) {
