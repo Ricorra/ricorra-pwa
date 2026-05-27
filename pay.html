@@ -794,7 +794,9 @@ async function init() {
 
   // Fetch plan data from Worker
   try {
-    const res  = await fetch(API_BASE + '/pay/' + shareToken);
+    const res  = await fetch(API_BASE + '/pay/' + shareToken, {
+      headers: { 'Accept': 'application/json' },
+    });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       showError(err.error === 'Plan paused'
