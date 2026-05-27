@@ -323,9 +323,9 @@ async function handleRequest(request, env) {
     const accept = request.headers.get('Accept') || '';
     const isAPIRequest = accept.includes('application/json');
 
-    // Browser navigation → serve pay.html
+    // Browser navigation → serve _pay.html
     if (!isAPIRequest) {
-      return env.ASSETS.fetch(new Request(new URL('/pay.html', request.url), request));
+      return env.ASSETS.fetch(new Request(new URL('/_pay.html', request.url), request));
     }
 
     // API fetch → return plan JSON
