@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ricorra — Signing in…</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400&family=DM+Sans:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --amber: #C49A3C;
+    --charcoal: #1C1C1A;
+    --parchment: #FAF8F4;
+    --warm-gray: #6B6860;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    background: var(--parchment);
+    font-family: 'DM Sans', sans-serif;
+    color: var(--charcoal);
+    -webkit-font-smoothing: antialiased;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  .wrap { padding: 24px; }
+  .mark { margin-bottom: 32px; animation: pulse 1.5s ease-in-out infinite; }
+  .title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 30px;
+    font-weight: 400;
+    color: var(--charcoal);
+    margin-bottom: 10px;
+  }
+  .title em { font-style: italic; color: var(--amber); }
+  .sub { font-size: 13px; font-weight: 300; color: var(--warm-gray); line-height: 1.6; }
+  .error-title { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 400; color: var(--charcoal); margin-bottom: 10px; }
+  .btn {
+    display: inline-block;
+    margin-top: 24px;
+    padding: 12px 28px;
+    background: var(--amber);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn:hover { background: #9E7A28; }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.6; transform: scale(1); }
+    50%       { opacity: 1;   transform: scale(1.04); }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="mark">
+    <svg width="64" height="64" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="100" cy="100" r="97" fill="#C49A3C"/>
+      <circle cx="100" cy="100" r="88" fill="none" stroke="#D4AA52" stroke-width="0.75"/>
+      <g transform="translate(0,6)">
+        <text x="100" y="100" font-family="Cormorant Garamond,Georgia,serif" font-size="141" font-weight="400"
+          fill="#FAF8F4" fill-opacity="0.45" text-anchor="middle" dominant-baseline="central">₿</text>
+        <text x="100" y="89" font-family="Cormorant Garamond,Georgia,serif" font-size="26" font-weight="300"
+          fill="#FAF8F4" text-anchor="middle" dominant-baseline="central" letter-spacing="12">ricorra</text>
+      </g>
+    </svg>
+  </div>
+
+  <div id="content">
+    <div class="title">Signing you <em>in…</em></div>
+    <div class="sub">Just a moment.</div>
+  </div>
+</div>
+
+<script>
+  const SESSION_KEY = 'ricorra_session_token';
+
+  async function verify() {
+    const params = new URLSearchParams(window.location.search);
+    const token  = params.get('token');
+
+    if (!token) {
+      showError('No token found in this link. Please request a new one.');
+      return;
+    }
+
+    try {
+      const res  = await fetch(`/auth/verify?token=${encodeURIComponent(token)}`);
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'This link is invalid or has expired.');
+      }
+
+      // Store session token
+      localStorage.setItem(SESSION_KEY, data.sessionToken);
+
+      // Redirect to dashboard
+      window.location.href = '/dashboard';
+
+    } catch (err) {
+      showError(err.message || 'Something went wrong. Please try signing in again.');
+    }
+  }
+
+  function showError(message) {
+    document.querySelector('.mark').style.animation = 'none';
+    document.querySelector('.mark').style.opacity = '0.4';
+    document.getElementById('content').innerHTML = `
+      <div class="error-title">This link has expired.</div>
+      <div class="sub">${message}</div>
+      <a class="btn" href="/">Request a new link</a>
+    `;
+  }
+
+  verify();
+</script>
+</body>
+</html>
