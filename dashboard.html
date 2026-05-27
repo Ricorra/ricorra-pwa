@@ -590,11 +590,8 @@
     // Nav
     document.getElementById('navEmail').textContent = email;
 
-    // First name from email — split on @ then on . or _ to get first segment
-    const localPart = email.split('@')[0];
-    const firstName = localPart.split(/[._+]/)[0];
-    const displayName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
-    document.getElementById('firstName').textContent = displayName;
+    // Simple greeting — don't guess names from emails
+    document.getElementById('firstName').textContent = 'you';
 
     // Account card
     document.getElementById('accountEmail').textContent = email;
