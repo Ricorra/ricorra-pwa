@@ -605,7 +605,7 @@
     sessionToken = localStorage.getItem(SESSION_KEY);
 
     if (!sessionToken) {
-      window.location.href = '/';
+      window.location.href = '/login';
       return;
     }
 
@@ -616,7 +616,7 @@
 
       if (res.status === 401) {
         localStorage.removeItem(SESSION_KEY);
-        window.location.href = '/';
+        window.location.href = '/login';
         return;
       }
 
@@ -628,7 +628,7 @@
 
     } catch (err) {
       console.error('Dashboard boot error:', err);
-      window.location.href = '/';
+      window.location.href = '/login';
     }
   }
 
@@ -775,7 +775,7 @@
       });
     } catch {}
     localStorage.removeItem(SESSION_KEY);
-    window.location.href = '/';
+    window.location.href = '/login';
   }
 
   // ── Helpers ───────────────────────────────────────────
