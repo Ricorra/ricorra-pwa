@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#C49A3C">
+<title>Ricorra — Subscribe</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root {
+  --amber:       #C49A3C;
+  --amber-light: #D4AA52;
+  --amber-pale:  #FAF0D7;
+  --amber-deep:  #9E7A28;
+  --parchment:   #FAF8F4;
+  --warm-white:  #F2EFE9;
+  --charcoal:    #1C1C1A;
+  --stone:       #E2DDD6;
+  --gray-text:   #6B6860;
+  --green:       #2D6A4F;
+  --green-pale:  #EAF5EF;
+  --red:         #991B1B;
+  --shadow:      0 4px 24px rgba(0,0,0,0.07);
+  --shadow-lg:   0 16px 56px rgba(0,0,0,0.13);
+  --font-display:'Cormorant Garamond', Georgia, serif;
+  --font-ui:     'DM Sans', system-ui, sans-serif;
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+body {
+  font-family: var(--font-ui);
+  background: var(--parchment);
+  color: var(--charcoal);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  width: 100%;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--stone);
+  background: var(--parchment);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.topbar-mark {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+}
+.topbar-mark svg { width: 28px; height: 28px; }
+.topbar-wordmark {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: var(--charcoal);
+}
+.topbar-secure {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gray-text);
+  letter-spacing: 0.05em;
+}
+.topbar-secure svg {
+  width: 13px; height: 13px;
+  fill: none;
+  stroke: var(--green);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ── MAIN CONTENT ── */
+.page-wrap {
+  width: 100%;
+  max-width: 480px;
+  padding: 0 0 48px;
+  flex: 1;
+}
+
+/* ── LOADING / ERROR ── */
+.state-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 40px 24px;
+  text-align: center;
+  gap: 14px;
+}
+.state-icon {
+  font-size: 40px;
+  margin-bottom: 4px;
+}
+.state-title {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--charcoal);
+}
+.state-body {
+  font-size: 14px;
+  color: var(--gray-text);
+  line-height: 1.6;
+  max-width: 280px;
+}
+.spinner {
+  width: 32px; height: 32px;
+  border: 3px solid var(--stone);
+  border-top-color: var(--amber);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── PLAN HEADER ── */
+.plan-header {
+  background: var(--amber);
+  padding: 28px 24px 32px;
+  position: relative;
+  overflow: hidden;
+  animation: fadeUp 0.3s ease both;
+}
+.plan-header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 60%);
+  pointer-events: none;
+}
+.plan-header-watermark {
+  position: absolute;
+  right: -12px; top: -12px;
+  font-family: var(--font-display);
+  font-size: 130px;
+  font-weight: 300;
+  color: rgba(255,255,255,0.08);
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+}
+.plan-merchant {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.75);
+  margin-bottom: 8px;
+}
+.plan-name {
+  font-family: var(--font-display);
+  font-size: 36px;
+  font-weight: 400;
+  color: white;
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+  margin-bottom: 6px;
+}
+.plan-desc {
+  font-size: 14px;
+  color: rgba(255,255,255,0.75);
+  line-height: 1.5;
+  margin-bottom: 18px;
+  font-weight: 300;
+}
+.plan-pricing {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.plan-price-usd {
+  font-family: var(--font-display);
+  font-size: 48px;
+  font-weight: 400;
+  color: white;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+.plan-price-interval {
+  font-size: 13px;
+  color: rgba(255,255,255,0.7);
+  font-weight: 400;
+  padding-bottom: 6px;
+}
+.plan-price-btc {
+  font-size: 13px;
+  color: rgba(255,255,255,0.65);
+  font-weight: 400;
+  padding-bottom: 6px;
+  font-style: italic;
+  font-family: var(--font-display);
+}
+
+/* ── PAYMENT SECTION ── */
+.section {
+  padding: 0 16px;
+  margin-top: 16px;
+  animation: fadeUp 0.35s ease 0.05s both;
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.section-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gray-text);
+  margin-bottom: 10px;
+}
+
+/* ── PAYMENT METHOD TABS ── */
+.method-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.method-tab {
+  flex: 1;
+  background: var(--warm-white);
+  border: 1.5px solid var(--stone);
+  border-radius: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+}
+.method-tab.active {
+  background: var(--amber-pale);
+  border-color: var(--amber);
+}
+.method-tab-icon { font-size: 18px; margin-bottom: 3px; }
+.method-tab-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--gray-text);
+}
+.method-tab.active .method-tab-label { color: var(--amber-deep); }
+
+/* ── QR CARD ── */
+.qr-card {
+  background: var(--parchment);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  border: 1px solid var(--stone);
+}
+.qr-card-inner {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+#qr-container {
+  background: white;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  border: 1.5px solid var(--stone);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 220px;
+  min-height: 220px;
+}
+#qr-container img,
+#qr-container canvas { border-radius: 6px; display: block; }
+
+.qr-instruction {
+  font-size: 13px;
+  color: var(--gray-text);
+  text-align: center;
+  line-height: 1.5;
+  max-width: 260px;
+}
+.qr-instruction strong { color: var(--charcoal); font-weight: 600; }
+
+/* ── ADDRESS ROW ── */
+.address-row {
+  width: 100%;
+  background: var(--warm-white);
+  border: 1.5px solid var(--stone);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.address-text {
+  flex: 1;
+  font-size: 11px;
+  color: var(--gray-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.02em;
+}
+.address-copy-btn {
+  background: var(--amber);
+  color: white;
+  border: none;
+  border-radius: 7px;
+  padding: 5px 12px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.address-copy-btn:active { background: var(--amber-deep); transform: scale(0.97); }
+.address-copy-btn.copied { background: var(--green); }
+
+/* ── LIGHTNING PANEL ── */
+.lightning-panel {
+  padding: 20px;
+  text-align: center;
+  display: none;
+}
+.lightning-panel.active { display: block; }
+.lightning-icon {
+  font-size: 48px;
+  margin-bottom: 10px;
+  animation: pulse-ln 2s ease-in-out infinite;
+}
+@keyframes pulse-ln {
+  0%,100% { transform: scale(1); }
+  50%      { transform: scale(1.06); }
+}
+.lightning-addr-display {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--charcoal);
+  margin-bottom: 8px;
+  word-break: break-all;
+}
+.lightning-hint {
+  font-size: 12px;
+  color: var(--gray-text);
+  line-height: 1.6;
+  margin-bottom: 14px;
+}
+
+/* ── AMOUNT DETAIL ── */
+.amount-detail {
+  background: var(--warm-white);
+  border-radius: 10px;
+  padding: 12px 14px;
+  width: 100%;
+  border: 1px solid var(--stone);
+}
+.amount-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: var(--gray-text);
+  padding: 3px 0;
+}
+.amount-detail-row.total {
+  border-top: 1px solid var(--stone);
+  margin-top: 6px;
+  padding-top: 8px;
+  font-weight: 700;
+  color: var(--charcoal);
+  font-size: 14px;
+}
+.amount-detail-row .val {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--charcoal);
+}
+.amount-detail-row.total .val {
+  font-size: 18px;
+  color: var(--amber-deep);
+}
+
+/* ── CONFIRM BUTTON ── */
+.confirm-section {
+  padding: 0 16px;
+  margin-top: 16px;
+  animation: fadeUp 0.4s ease 0.1s both;
+}
+.confirm-btn {
+  width: 100%;
+  background: var(--charcoal);
+  color: var(--parchment);
+  border: none;
+  border-radius: 50px;
+  padding: 15px;
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  letter-spacing: 0.02em;
+}
+.confirm-btn:active { transform: scale(0.98); background: #2C2C22; }
+.confirm-btn svg {
+  width: 16px; height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.confirm-hint {
+  text-align: center;
+  font-size: 11px;
+  color: var(--gray-text);
+  margin-top: 10px;
+  line-height: 1.5;
+}
+
+/* ── THANK YOU SCREEN ── */
+#thank-you-screen {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 48px 24px;
+  animation: fadeUp 0.35s ease both;
+}
+#thank-you-screen.active { display: flex; }
+.ty-mark {
+  width: 72px; height: 72px;
+  background: var(--green-pale);
+  border: 2px solid var(--green);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  margin-bottom: 20px;
+  animation: popIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+@keyframes popIn {
+  from { transform: scale(0.5); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+.ty-title {
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 400;
+  color: var(--charcoal);
+  margin-bottom: 10px;
+  letter-spacing: 0.01em;
+}
+.ty-title em { color: var(--amber); font-style: italic; }
+.ty-body {
+  font-size: 14px;
+  color: var(--gray-text);
+  line-height: 1.7;
+  max-width: 300px;
+  margin-bottom: 28px;
+}
+.ty-details {
+  background: var(--warm-white);
+  border-radius: 14px;
+  padding: 16px 20px;
+  width: 100%;
+  max-width: 340px;
+  border: 1px solid var(--stone);
+  text-align: left;
+  margin-bottom: 24px;
+}
+.ty-detail-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--stone);
+}
+.ty-detail-row:last-child { border-bottom: none; }
+.ty-detail-label { color: var(--gray-text); }
+.ty-detail-val   { font-weight: 600; color: var(--charcoal); font-family: var(--font-display); font-size: 15px; }
+.ty-note {
+  font-size: 11px;
+  color: var(--gray-text);
+  line-height: 1.6;
+  max-width: 300px;
+}
+
+/* ── DISCLAIMER ── */
+.disclaimer {
+  padding: 16px 16px 0;
+  animation: fadeUp 0.45s ease 0.15s both;
+}
+.disclaimer-inner {
+  background: var(--warm-white);
+  border-radius: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--stone);
+}
+.disclaimer-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gray-text);
+  margin-bottom: 6px;
+}
+.disclaimer-body {
+  font-size: 11px;
+  color: var(--gray-text);
+  line-height: 1.6;
+}
+.disclaimer-body a { color: var(--amber-deep); text-decoration: none; font-weight: 600; }
+
+/* ── FOOTER ── */
+.pay-footer {
+  padding: 24px 16px 12px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--gray-text);
+  line-height: 1.8;
+  animation: fadeUp 0.5s ease 0.2s both;
+}
+.pay-footer a {
+  color: var(--amber-deep);
+  text-decoration: none;
+  font-weight: 600;
+}
+.pay-footer-brand {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--charcoal);
+  letter-spacing: 0.06em;
+  margin-bottom: 2px;
+}
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--charcoal);
+  color: var(--parchment);
+  padding: 10px 20px;
+  border-radius: 50px;
+  font-size: 13px;
+  font-weight: 600;
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.25s;
+  white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── NO LIGHTNING ── */
+.no-ln-msg {
+  padding: 28px 20px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--gray-text);
+  line-height: 1.6;
+}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <a class="topbar-mark" href="https://ricorra.com">
+    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="100" cy="100" r="96" fill="#C49A3C"/>
+      <circle cx="100" cy="100" r="88" fill="none" stroke="#D4AA52" stroke-width="1.5" opacity="0.6"/>
+      <text x="100" y="100" text-anchor="middle" dominant-baseline="central"
+        font-family="'Cormorant Garamond', Georgia, serif" font-size="148" font-weight="400"
+        fill="#FAF8F4" opacity="0.42">₿</text>
+      <text x="100" y="100" text-anchor="middle" dominant-baseline="central"
+        font-family="'Cormorant Garamond', Georgia, serif" font-size="14" font-weight="300"
+        fill="#FAF8F4" letter-spacing="10" dy="-4">ricorra</text>
+    </svg>
+    <span class="topbar-wordmark">ricorra</span>
+  </a>
+  <div class="topbar-secure">
+    <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    Non-custodial
+  </div>
+</header>
+
+<div class="page-wrap">
+
+  <!-- LOADING STATE -->
+  <div class="state-screen" id="loading-screen">
+    <div class="spinner"></div>
+    <div class="state-body">Loading payment details…</div>
+  </div>
+
+  <!-- ERROR STATE -->
+  <div class="state-screen" id="error-screen" style="display:none;">
+    <div class="state-icon">∅</div>
+    <div class="state-title">Plan not found</div>
+    <div class="state-body" id="error-body">This payment link may have expired or been removed by the creator.</div>
+    <a href="https://ricorra.com" style="margin-top:8px;font-size:13px;color:var(--amber-deep);font-weight:600;text-decoration:none;">Learn about Ricorra →</a>
+  </div>
+
+  <!-- MAIN PAYMENT UI -->
+  <div id="payment-screen" style="display:none;">
+
+    <!-- Plan header -->
+    <div class="plan-header">
+      <div class="plan-header-watermark">₿</div>
+      <div class="plan-merchant" id="merchant-name">Loading…</div>
+      <div class="plan-name" id="plan-name">Plan Name</div>
+      <div class="plan-desc" id="plan-desc"></div>
+      <div class="plan-pricing">
+        <div class="plan-price-usd" id="price-usd">$0.00</div>
+        <div class="plan-price-interval" id="price-interval">/ month</div>
+        <div class="plan-price-btc" id="price-btc"></div>
+      </div>
+    </div>
+
+    <!-- Payment method tabs (only shown if Lightning available) -->
+    <div class="section" id="method-tabs-wrap" style="display:none;">
+      <div class="section-label">Pay with</div>
+      <div class="method-tabs">
+        <div class="method-tab active" id="tab-btc" onclick="switchMethod('btc')">
+          <div class="method-tab-icon">₿</div>
+          <div class="method-tab-label">Bitcoin</div>
+        </div>
+        <div class="method-tab" id="tab-ln" onclick="switchMethod('ln')">
+          <div class="method-tab-icon">⚡</div>
+          <div class="method-tab-label">Lightning</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- QR / Payment card -->
+    <div class="section" style="margin-top:14px;">
+      <div class="section-label" id="qr-section-label">Scan to pay</div>
+      <div class="qr-card">
+
+        <!-- Bitcoin QR panel -->
+        <div id="btc-panel" class="qr-card-inner">
+          <div id="qr-container"></div>
+          <p class="qr-instruction">
+            Open your Bitcoin wallet app, tap <strong>Send</strong>, and scan this code.
+            The exact amount will be pre-filled automatically.
+          </p>
+          <div class="amount-detail" id="amount-detail">
+            <div class="amount-detail-row">
+              <span>Subscription</span>
+              <span class="val" id="detail-plan-price">—</span>
+            </div>
+            <div class="amount-detail-row">
+              <span>In Bitcoin</span>
+              <span class="val" id="detail-btc-amount">—</span>
+            </div>
+            <div class="amount-detail-row total">
+              <span>Total due</span>
+              <span class="val" id="detail-total">—</span>
+            </div>
+          </div>
+          <div class="address-row">
+            <span class="address-text" id="wallet-address-text">—</span>
+            <button class="address-copy-btn" id="copy-btn" onclick="copyAddress()">Copy</button>
+          </div>
+        </div>
+
+        <!-- Lightning panel -->
+        <div id="ln-panel" style="display:none;">
+          <div class="lightning-panel active">
+            <div class="lightning-icon">⚡</div>
+            <div class="lightning-addr-display" id="ln-address-display">—</div>
+            <div class="lightning-hint">
+              Open your Lightning wallet and send to this address.<br>
+              Lightning payments are instant and near-zero fee.
+            </div>
+            <div class="address-row" style="max-width:320px;margin:0 auto 12px;">
+              <span class="address-text" id="ln-address-text">—</span>
+              <button class="address-copy-btn" id="ln-copy-btn" onclick="copyLightningAddress()">Copy</button>
+            </div>
+            <div class="amount-detail" style="max-width:320px;margin:0 auto;">
+              <div class="amount-detail-row total">
+                <span>Send exactly</span>
+                <span class="val" id="detail-ln-amount">—</span>
+              </div>
+            </div>
+          </div>
+          <div class="no-ln-msg" id="no-ln-msg" style="display:none;">
+            Lightning not available for this merchant. Please use the Bitcoin option above.
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Confirm button -->
+    <div class="confirm-section">
+      <button class="confirm-btn" onclick="confirmPayment()">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        I've sent the payment
+      </button>
+      <div class="confirm-hint">
+        Only tap after your wallet confirms the transaction was sent.
+        Bitcoin payments take a few minutes to confirm on-chain.
+      </div>
+    </div>
+
+    <!-- Disclaimer -->
+    <div class="disclaimer">
+      <div class="disclaimer-inner">
+        <div class="disclaimer-title">Important</div>
+        <div class="disclaimer-body">
+          This is a non-custodial Bitcoin payment — funds go directly to the merchant's wallet.
+          Ricorra never holds or touches your payment.
+          Crypto payments are <strong>final and cannot be reversed</strong> once sent.
+          Make sure the amount is correct before sending.
+          <a href="https://ricorra.com/terms" target="_blank">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="pay-footer">
+      <div class="pay-footer-brand">ricorra</div>
+      Subscriptions, self-sovereign.<br>
+      <a href="https://ricorra.com" target="_blank">ricorra.com</a> ·
+      <a href="https://ricorra.com/privacy" target="_blank">Privacy</a>
+    </div>
+
+  </div><!-- /payment-screen -->
+
+  <!-- THANK YOU SCREEN -->
+  <div id="thank-you-screen">
+    <div class="ty-mark">✓</div>
+    <div class="ty-title">Thank <em>you.</em></div>
+    <div class="ty-body" id="ty-body">
+      Your payment has been sent. The merchant will confirm it once it appears on the blockchain — usually within a few minutes.
+    </div>
+    <div class="ty-details" id="ty-details"></div>
+    <div class="ty-note">
+      Keep this page open until you see a confirmation in your wallet app.
+      Bitcoin on-chain payments typically confirm in 1–3 blocks (~10–30 minutes).
+      Lightning payments confirm instantly.
+    </div>
+  </div>
+
+</div><!-- /page-wrap -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+const API_BASE   = 'https://ricorra.io';
+const shareToken = location.pathname.split('/pay/')[1] || '';
+
+let planData     = null;
+let btcRate      = 0;
+let activeMethod = 'btc';
+
+// ── INIT ────────────────────────────────────────────
+async function init() {
+  if (!shareToken) {
+    showError('No payment link provided. Please check the URL and try again.');
+    return;
+  }
+
+  // Fetch plan data from Worker
+  try {
+    const res  = await fetch(API_BASE + '/pay/' + shareToken);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      showError(err.error === 'Plan paused'
+        ? 'This subscription plan is currently paused. Please check back later or contact the creator.'
+        : 'This payment link is invalid or has been removed.');
+      return;
+    }
+    planData = await res.json();
+  } catch(e) {
+    showError('Could not load payment details. Please check your connection and try again.');
+    return;
+  }
+
+  // Fetch live BTC rate
+  await fetchBTCRate();
+
+  // Render
+  renderPaymentPage();
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('payment-screen').style.display = 'block';
+
+  // Refresh rate every 60 seconds
+  setInterval(fetchBTCRate, 60000);
+}
+
+// ── BTC RATE ────────────────────────────────────────
+async function fetchBTCRate() {
+  try {
+    const res  = await fetch('https://blockchain.info/ticker');
+    const data = await res.json();
+    if (data.USD?.last) { btcRate = data.USD.last; updateBTCDisplay(); return; }
+  } catch(e) {}
+  try {
+    const res  = await fetch('https://api.coinbase.com/v2/exchange-rates?currency=BTC');
+    const data = await res.json();
+    if (data.data?.rates?.USD) { btcRate = parseFloat(data.data.rates.USD); updateBTCDisplay(); }
+  } catch(e) {}
+}
+
+function updateBTCDisplay() {
+  if (!planData) return;
+  const btcAmt = btcRate > 0 ? (planData.priceUSD / btcRate) : 0;
+  const btcStr = btcAmt > 0 ? btcAmt.toFixed(6) + ' BTC' : '—';
+
+  const priceBtcEl = document.getElementById('price-btc');
+  if (priceBtcEl) priceBtcEl.textContent = btcAmt > 0 ? '≈ ' + btcStr : '';
+
+  const detailBtc = document.getElementById('detail-btc-amount');
+  if (detailBtc) detailBtc.textContent = btcStr;
+
+  const detailLn = document.getElementById('detail-ln-amount');
+  if (detailLn) detailLn.textContent = '$' + planData.priceUSD.toFixed(2) + ' USD';
+
+  // Rebuild QR with updated BTC amount
+  if (activeMethod === 'btc' && planData.walletAddress) {
+    buildBTCQR(planData.walletAddress, btcAmt);
+  }
+}
+
+// ── RENDER ───────────────────────────────────────────
+function renderPaymentPage() {
+  const p = planData;
+
+  // Header
+  document.getElementById('merchant-name').textContent  = p.merchantName ? p.merchantName.toUpperCase() : 'RICORRA MERCHANT';
+  document.getElementById('plan-name').textContent      = p.planName;
+  document.getElementById('plan-desc').textContent      = p.planDesc || '';
+  document.getElementById('price-usd').textContent      = '$' + p.priceUSD.toFixed(2);
+  document.getElementById('price-interval').textContent = '/ ' + (p.interval === 'annual' ? 'year' : 'month');
+
+  // Amount detail
+  document.getElementById('detail-plan-price').textContent = '$' + p.priceUSD.toFixed(2);
+  document.getElementById('detail-total').textContent      = '$' + p.priceUSD.toFixed(2);
+
+  // Show method tabs if Lightning available
+  if (p.lightningAddress) {
+    document.getElementById('method-tabs-wrap').style.display = 'block';
+  }
+
+  // BTC QR
+  if (p.walletAddress) {
+    document.getElementById('wallet-address-text').textContent = p.walletAddress;
+    const btcAmt = btcRate > 0 ? (p.priceUSD / btcRate) : 0;
+    buildBTCQR(p.walletAddress, btcAmt);
+    updateBTCDisplay();
+  } else {
+    document.getElementById('qr-container').innerHTML =
+      '<div style="padding:24px;text-align:center;font-size:13px;color:#6B6860;line-height:1.6;">Wallet address not configured.<br>Please contact the merchant.</div>';
+  }
+
+  // Lightning
+  if (p.lightningAddress) {
+    document.getElementById('ln-address-display').textContent = p.lightningAddress;
+    document.getElementById('ln-address-text').textContent    = p.lightningAddress;
+  }
+
+  // Update document title
+  document.title = 'Pay ' + p.planName + ' — Ricorra';
+}
+
+// ── QR CODE ──────────────────────────────────────────
+function buildBTCQR(address, btcAmount) {
+  const qrDiv = document.getElementById('qr-container');
+  qrDiv.innerHTML = '';
+  const uri = btcAmount > 0
+    ? 'bitcoin:' + address + '?amount=' + btcAmount.toFixed(8)
+    : 'bitcoin:' + address;
+  try {
+    new QRCode(qrDiv, {
+      text:         uri,
+      width:        200,
+      height:       200,
+      colorDark:    '#1C1C1A',
+      colorLight:   '#FFFFFF',
+      correctLevel: QRCode.CorrectLevel.M,
+    });
+  } catch(e) {
+    qrDiv.innerHTML = '<div style="padding:20px;text-align:center;font-size:13px;color:#6B6860;">QR generation failed.<br>Use the Copy button below.</div>';
+  }
+}
+
+// ── METHOD SWITCH ────────────────────────────────────
+function switchMethod(method) {
+  activeMethod = method;
+
+  document.getElementById('tab-btc').classList.toggle('active', method === 'btc');
+  document.getElementById('tab-ln').classList.toggle('active',  method === 'ln');
+  document.getElementById('btc-panel').style.display = method === 'btc' ? 'flex' : 'none';
+  document.getElementById('ln-panel').style.display  = method === 'ln'  ? 'block' : 'none';
+  document.getElementById('qr-section-label').textContent = method === 'btc' ? 'Scan to pay' : 'Send via Lightning';
+}
+
+// ── COPY ─────────────────────────────────────────────
+function copyAddress() {
+  const addr = planData?.walletAddress;
+  if (!addr) return;
+  copyText(addr, 'copy-btn', 'Address copied!');
+}
+
+function copyLightningAddress() {
+  const addr = planData?.lightningAddress;
+  if (!addr) return;
+  copyText(addr, 'ln-copy-btn', 'Lightning address copied!');
+}
+
+function copyText(text, btnId, msg) {
+  const btn = document.getElementById(btnId);
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(text).then(() => {
+      showToast(msg);
+      if (btn) { btn.textContent = '✓'; btn.classList.add('copied'); setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000); }
+    });
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;opacity:0;';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    try { document.execCommand('copy'); showToast(msg); } catch(e) {}
+    document.body.removeChild(ta);
+  }
+}
+
+// ── CONFIRM PAYMENT ──────────────────────────────────
+function confirmPayment() {
+  if (!planData) return;
+
+  // Populate thank you screen
+  const btcAmt = btcRate > 0 ? (planData.priceUSD / btcRate).toFixed(6) : '—';
+  const method = activeMethod === 'ln' ? 'Lightning Network' : 'Bitcoin (on-chain)';
+
+  document.getElementById('ty-body').textContent =
+    'Your payment to ' + (planData.merchantName || 'the merchant') +
+    ' has been sent. They will confirm it once it appears on the blockchain.';
+
+  document.getElementById('ty-details').innerHTML = `
+    <div class="ty-detail-row">
+      <span class="ty-detail-label">Plan</span>
+      <span class="ty-detail-val">${escHtml(planData.planName)}</span>
+    </div>
+    <div class="ty-detail-row">
+      <span class="ty-detail-label">Amount</span>
+      <span class="ty-detail-val">$${planData.priceUSD.toFixed(2)}</span>
+    </div>
+    <div class="ty-detail-row">
+      <span class="ty-detail-label">In Bitcoin</span>
+      <span class="ty-detail-val">${btcAmt} BTC</span>
+    </div>
+    <div class="ty-detail-row">
+      <span class="ty-detail-label">Method</span>
+      <span class="ty-detail-val">${method}</span>
+    </div>
+    <div class="ty-detail-row">
+      <span class="ty-detail-label">Time</span>
+      <span class="ty-detail-val">${new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</span>
+    </div>`;
+
+  // Transition
+  document.getElementById('payment-screen').style.display = 'none';
+  document.getElementById('thank-you-screen').classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── ERROR ────────────────────────────────────────────
+function showError(msg) {
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('error-screen').style.display   = 'flex';
+  const bodyEl = document.getElementById('error-body');
+  if (bodyEl) bodyEl.textContent = msg;
+}
+
+// ── TOAST ────────────────────────────────────────────
+let toastTimeout;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ── ESCAPE HTML ──────────────────────────────────────
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+window.addEventListener('load', init);
+</script>
+</body>
+</html>

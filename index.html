@@ -3271,7 +3271,7 @@ function openCreatePlan() {
   const title = document.getElementById('plan-modal-title');
   const sub   = document.getElementById('plan-modal-sub');
   if (title) title.textContent = t('new_plan') || 'New Plan';
-  if (sub)   sub.textContent   = 'Define your subscription — name, price, and billing interval.';
+  if (sub)   sub.textContent   = t('form_plan_interval_hint') || 'Define your subscription — name, price, and billing interval.';
   document.getElementById('plan-modal').classList.add('active');
   setTimeout(() => {
     const inp = document.getElementById('plan-name-input');
@@ -3341,6 +3341,31 @@ function savePlan() {
   renderPlans();
   renderHome();
   showToast(t('toast_plan_saved'));
+
+  // Push plan to Worker so /pay/{shareToken} works
+  const newPlan = plans.find(p => p.shareToken === (id ? plans.find(pl => pl.id === id)?.shareToken : plans[plans.length-1]?.shareToken));
+  if (newPlan) pushPlanToWorker(newPlan);
+}
+
+// Push a single plan to Worker KV so /pay/{shareToken} works
+async function pushPlanToWorker(plan) {
+  const token = getSessionToken();
+  if (!token || !plan?.shareToken) return;
+  try {
+    await fetch(API_BASE + '/merchant/plans', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({
+        id:          plan.id,
+        name:        plan.name,
+        priceUSD:    plan.priceUSD,
+        interval:    plan.interval,
+        desc:        plan.desc || '',
+        status:      plan.status,
+        shareToken:  plan.shareToken,
+      }),
+    });
+  } catch(e) { /* silent — link will work after next sync */ }
 }
 
 function togglePlanStatus(planId) {
@@ -3356,6 +3381,7 @@ function togglePlanStatus(planId) {
   savePlansToStorage();
   renderPlans();
   renderHome();
+  pushPlanToWorker(plan);
 }
 
 function deletePlan(planId) {
