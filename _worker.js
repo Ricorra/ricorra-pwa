@@ -1,7 +1,7 @@
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
 function json(data, status = 200) {
@@ -20,6 +20,25 @@ function generateToken(length = 32) {
     token += chars[array[i] % chars.length];
   }
   return token;
+}
+
+// ── Session middleware ───────────────────────────────
+async function getEmailFromSession(request, env) {
+  const authHeader = request.headers.get('Authorization') || '';
+  const sessionToken = authHeader.startsWith('Bearer ')
+    ? authHeader.slice(7).trim()
+    : null;
+
+  if (!sessionToken) return null;
+
+  try {
+    const raw = await env.DB.get(`session:${sessionToken}`);
+    if (!raw) return null;
+    const record = JSON.parse(raw);
+    return record.email || null;
+  } catch {
+    return null;
+  }
 }
 
 async function handleRequest(request, env) {
@@ -121,6 +140,71 @@ async function handleRequest(request, env) {
     );
 
     return json({ success: true, sessionToken, email: record.email });
+  }
+
+  // ── POST /auth/logout ────────────────────────────────
+  if (method === 'POST' && url.pathname === '/auth/logout') {
+    const authHeader = request.headers.get('Authorization') || '';
+    const sessionToken = authHeader.startsWith('Bearer ')
+      ? authHeader.slice(7).trim()
+      : null;
+
+    if (sessionToken) {
+      await env.DB.delete(`session:${sessionToken}`);
+    }
+
+    return json({ success: true, message: 'Logged out' });
+  }
+
+  // ── GET /merchant/dashboard ──────────────────────────
+  if (method === 'GET' && url.pathname === '/merchant/dashboard') {
+    const email = await getEmailFromSession(request, env);
+    if (!email) return json({ error: 'Unauthorized' }, 401);
+
+    // Load wallet address if set
+    let walletAddress = null;
+    try {
+      const raw = await env.DB.get(`merchant:${email}:wallet`);
+      if (raw) walletAddress = JSON.parse(raw).address;
+    } catch {
+      walletAddress = null;
+    }
+
+    return json({
+      success: true,
+      email,
+      walletAddress,
+    });
+  }
+
+  // ── POST /merchant/wallet ────────────────────────────
+  if (method === 'POST' && url.pathname === '/merchant/wallet') {
+    const email = await getEmailFromSession(request, env);
+    if (!email) return json({ error: 'Unauthorized' }, 401);
+
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return json({ error: 'Invalid JSON' }, 400);
+    }
+
+    const address = (body.address || '').trim();
+    if (!address) {
+      return json({ error: 'Wallet address required' }, 400);
+    }
+
+    // Basic Bitcoin address sanity check (starts with 1, 3, or bc1)
+    if (!/^(1|3|bc1)[a-zA-Z0-9]{8,}$/.test(address)) {
+      return json({ error: 'Invalid Bitcoin wallet address' }, 400);
+    }
+
+    await env.DB.put(
+      `merchant:${email}:wallet`,
+      JSON.stringify({ address, updatedAt: Date.now() })
+    );
+
+    return json({ success: true, address });
   }
 
   // ── 404 ──────────────────────────────────────────────
