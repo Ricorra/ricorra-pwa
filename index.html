@@ -3347,6 +3347,7 @@ function savePlan() {
     ? plans.find(p => p.id === id)
     : plans[plans.length - 1];
   if (savedPlan) pushPlanToWorker(savedPlan);
+  syncPush();
 }
 
 // Push a single plan to Worker KV so /pay/{shareToken} works
@@ -3384,6 +3385,7 @@ function togglePlanStatus(planId) {
   renderPlans();
   renderHome();
   pushPlanToWorker(plan);
+  syncPush();
 }
 
 function deletePlan(planId) {
@@ -3404,6 +3406,7 @@ function deletePlan(planId) {
       renderPlans();
       renderHome();
       showToast(t('toast_plan_deleted'));
+      syncPush();
     }
   );
 }
