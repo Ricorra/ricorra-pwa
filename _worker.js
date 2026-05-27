@@ -177,11 +177,49 @@ async function handleRequest(request, env) {
       walletAddress = null;
     }
 
+    // Load display name if set
+    let displayName = null;
+    try {
+      const raw = await env.DB.get(`merchant:${email}:profile`);
+      if (raw) displayName = JSON.parse(raw).displayName;
+    } catch {
+      displayName = null;
+    }
+
     return json({
       success: true,
       email,
       walletAddress,
+      displayName,
     });
+  }
+
+  // ── POST /merchant/profile ───────────────────────────
+  if (method === 'POST' && url.pathname === '/merchant/profile') {
+    const email = await getEmailFromSession(request, env);
+    if (!email) return json({ error: 'Unauthorized' }, 401);
+
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return json({ error: 'Invalid JSON' }, 400);
+    }
+
+    const displayName = (body.displayName || '').trim();
+    if (!displayName) {
+      return json({ error: 'Display name required' }, 400);
+    }
+    if (displayName.length > 50) {
+      return json({ error: 'Display name must be 50 characters or fewer' }, 400);
+    }
+
+    await env.DB.put(
+      `merchant:${email}:profile`,
+      JSON.stringify({ displayName, updatedAt: Date.now() })
+    );
+
+    return json({ success: true, displayName });
   }
 
   // ── POST /merchant/wallet ────────────────────────────
