@@ -116,21 +116,21 @@ async function handleRequest(request, env) {
     const token = url.searchParams.get('token');
 
     if (!token) {
-      return Response.redirect('https://ricorra.com/?error=missing_token', 302);
+      return Response.redirect('https://ricorra.com/login?error=missing_token', 302);
     }
 
     let record;
     try {
       const raw = await env.DB.get(`magiclink:${token}`);
-      if (!raw) return Response.redirect('https://ricorra.com/?error=invalid_token', 302);
+      if (!raw) return Response.redirect('https://ricorra.com/login?error=invalid_token', 302);
       record = JSON.parse(raw);
     } catch {
-      return Response.redirect('https://ricorra.com/?error=invalid_token', 302);
+      return Response.redirect('https://ricorra.com/login?error=invalid_token', 302);
     }
 
     if (Date.now() > record.expires) {
       await env.DB.delete(`magiclink:${token}`);
-      return Response.redirect('https://ricorra.com/?error=expired_token', 302);
+      return Response.redirect('https://ricorra.com/login?error=expired_token', 302);
     }
 
     await env.DB.delete(`magiclink:${token}`);
