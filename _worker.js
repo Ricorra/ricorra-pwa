@@ -317,26 +317,25 @@ async function handleRequest(request, env) {
     return json({ success: true });
   }
 
-  // ── GET /pay/:shareToken (public — no auth) ─────────
-  if (method === 'GET' && url.pathname.startsWith('/pay/')) {
-    const shareToken = url.pathname.split('/pay/')[1] || '';
-    if (!shareToken) return json({ error: 'Invalid payment link' }, 400);
-
+  // ── GET /pay (public — no auth) ─────────────────────
+  if (method === 'GET' && url.pathname === '/pay') {
+    const shareToken = url.searchParams.get('t') || '';
     const accept = request.headers.get('Accept') || '';
-    const isAPIRequest = accept.includes('application/json') || url.searchParams.has('json');
+    const isAPIRequest = accept.includes('application/json');
 
-    // Browser navigation → serve the pay.html static asset
+    // Browser navigation → serve pay.html
     if (!isAPIRequest) {
       return env.ASSETS.fetch(new Request(new URL('/pay.html', request.url), request));
     }
 
-    // API fetch from pay.html → return plan data as JSON
+    // API fetch → return plan JSON
+    if (!shareToken) return json({ error: 'Invalid payment link' }, 400);
+
     try {
       const raw = await env.DB.get(`plan:${shareToken}`);
       if (!raw) return json({ error: 'Plan not found' }, 404);
 
       const record = JSON.parse(raw);
-
       if (record.status === 'paused')   return json({ error: 'Plan paused' }, 403);
       if (record.status === 'archived') return json({ error: 'Plan not found' }, 404);
 
