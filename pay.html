@@ -794,7 +794,7 @@ async function init() {
 
   // Fetch plan data from Worker
   try {
-    const res  = await fetch(API_BASE + '/pay?t=' + shareToken, {
+    const res  = await fetch(API_BASE + '/subscribe?t=' + shareToken, {
       headers: { 'Accept': 'application/json' },
     });
     if (!res.ok) {
