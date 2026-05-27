@@ -318,14 +318,14 @@ async function handleRequest(request, env) {
   }
 
   // ── GET /pay (public — no auth) ─────────────────────
-  if (method === 'GET' && url.pathname === '/pay') {
+  if (method === 'GET' && url.pathname === '/subscribe') {
     const shareToken = url.searchParams.get('t') || '';
     const accept = request.headers.get('Accept') || '';
     const isAPIRequest = accept.includes('application/json');
 
     // Browser navigation → serve _pay.html
     if (!isAPIRequest) {
-      return env.ASSETS.fetch(new Request(new URL('/_pay.html', request.url), request));
+      return env.ASSETS.fetch(new Request(new URL('/pay.html', request.url), request));
     }
 
     // API fetch → return plan JSON
