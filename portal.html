@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#C49A3C">
+<title>Ricorra — My Subscription</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --amber:      #C49A3C;
+  --amber-deep: #9E7A28;
+  --amber-pale: #FAF0D7;
+  --parchment:  #FAF8F4;
+  --warm-white: #F2EFE9;
+  --charcoal:   #1C1C1A;
+  --stone:      #E2DDD6;
+  --gray-text:  #6B6860;
+  --green:      #2D6A4F;
+  --green-pale: #EAF5EF;
+  --red:        #991B1B;
+  --red-pale:   #FEE2E2;
+  --shadow:     0 4px 24px rgba(0,0,0,0.07);
+  --shadow-lg:  0 16px 48px rgba(0,0,0,0.12);
+  --font-display:'Cormorant Garamond', Georgia, serif;
+  --font-ui:    'DM Sans', system-ui, sans-serif;
+}
+*,*::before,*::after { margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent; }
+body {
+  font-family: var(--font-ui);
+  background: var(--parchment);
+  color: var(--charcoal);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  -webkit-font-smoothing: antialiased;
+}
+.topbar {
+  width: 100%;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--stone);
+  background: var(--parchment);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.topbar-mark {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+}
+.topbar-mark svg { width: 28px; height: 28px; }
+.topbar-wordmark {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: var(--charcoal);
+}
+.topbar-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gray-text);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.page-wrap {
+  width: 100%;
+  max-width: 480px;
+  padding: 0 0 48px;
+  flex: 1;
+}
+/* Loading / Error */
+.state-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 40px 24px;
+  text-align: center;
+  gap: 14px;
+}
+.spinner {
+  width: 32px; height: 32px;
+  border: 3px solid var(--stone);
+  border-top-color: var(--amber);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.state-title { font-family: var(--font-display); font-size: 24px; font-weight: 400; }
+.state-body  { font-size: 14px; color: var(--gray-text); line-height: 1.6; max-width: 280px; }
+/* Status hero */
+.status-hero {
+  padding: 28px 24px 24px;
+  background: var(--amber);
+  position: relative;
+  overflow: hidden;
+  animation: fadeUp 0.3s ease both;
+}
+.status-hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 60%);
+  pointer-events: none;
+}
+.status-hero.overdue  { background: #D97706; }
+.status-hero.canceled { background: var(--charcoal); }
+.status-watermark {
+  position: absolute;
+  right: -12px; top: -12px;
+  font-family: var(--font-display);
+  font-size: 130px;
+  color: rgba(255,255,255,0.07);
+  pointer-events: none;
+  user-select: none;
+}
+.status-merchant {
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: rgba(255,255,255,0.7);
+  margin-bottom: 6px;
+}
+.status-plan {
+  font-family: var(--font-display);
+  font-size: 32px; font-weight: 400;
+  color: white; line-height: 1.1;
+  margin-bottom: 6px;
+}
+.status-price {
+  font-size: 14px; color: rgba(255,255,255,0.75);
+  margin-bottom: 16px;
+}
+.status-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,0.18);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 12px; font-weight: 700;
+  color: white;
+  letter-spacing: 0.05em;
+}
+.status-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #BBF7D0;
+}
+.status-dot.overdue  { background: #FDE68A; }
+.status-dot.canceled { background: #9A9690; }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+/* Section */
+.section { padding: 0 16px; margin-top: 16px; animation: fadeUp 0.35s ease 0.05s both; }
+.section-label {
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--gray-text); margin-bottom: 10px;
+}
+/* Info card */
+.info-card {
+  background: var(--parchment);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  border: 1px solid var(--stone);
+}
+.info-row {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--stone);
+  gap: 10px;
+}
+.info-row:last-child { border-bottom: none; }
+.info-label { font-size: 13px; color: var(--gray-text); }
+.info-val   { font-family: var(--font-display); font-size: 15px; font-weight: 500; color: var(--charcoal); text-align: right; }
+.info-val.green   { color: var(--green); }
+.info-val.amber   { color: var(--amber-deep); }
+.info-val.red     { color: var(--red); }
+/* Grace period warning */
+.grace-banner {
+  background: #FEF3C7;
+  border: 1px solid #F59E0B;
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex; gap: 10px; align-items: flex-start;
+}
+.grace-icon { font-size: 20px; flex-shrink: 0; }
+.grace-text { font-size: 13px; color: #92400E; line-height: 1.5; }
+.grace-text strong { font-weight: 700; }
+/* Payment button */
+.pay-btn {
+  width: 100%;
+  background: var(--amber);
+  color: white; border: none;
+  border-radius: 50px;
+  padding: 15px;
+  font-family: var(--font-ui);
+  font-size: 15px; font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex; align-items: center;
+  justify-content: center; gap: 8px;
+  text-decoration: none;
+}
+.pay-btn:active { transform: scale(0.98); background: var(--amber-deep); }
+/* History */
+.history-item {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--stone);
+  gap: 10px;
+}
+.history-item:last-child { border-bottom: none; }
+.history-icon {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--green-pale);
+  display: flex; align-items: center;
+  justify-content: center;
+  font-size: 14px; flex-shrink: 0;
+}
+.history-info { flex: 1; }
+.history-date { font-size: 13px; font-weight: 500; color: var(--charcoal); }
+.history-coin { font-size: 11px; color: var(--gray-text); margin-top: 2px; }
+.history-amount {
+  font-family: var(--font-display);
+  font-size: 15px; font-weight: 500;
+  color: var(--green);
+}
+/* Receipt download */
+.receipt-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: none;
+  border: 1.5px solid var(--stone);
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-family: var(--font-ui);
+  font-size: 11px; font-weight: 600;
+  color: var(--gray-text);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.receipt-btn:hover { border-color: var(--amber); color: var(--amber-deep); }
+/* Empty history */
+.empty-history {
+  padding: 28px 20px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--gray-text);
+}
+/* Footer */
+.portal-footer {
+  padding: 24px 16px 12px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--gray-text);
+  line-height: 1.8;
+  animation: fadeUp 0.5s ease 0.2s both;
+}
+.portal-footer a { color: var(--amber-deep); text-decoration: none; font-weight: 600; }
+.portal-footer-brand {
+  font-family: var(--font-display);
+  font-size: 14px; font-weight: 400;
+  color: var(--charcoal);
+  letter-spacing: 0.06em;
+  margin-bottom: 2px;
+}
+/* Toast */
+.toast {
+  position: fixed; bottom: 32px;
+  left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--charcoal); color: var(--parchment);
+  padding: 10px 20px; border-radius: 50px;
+  font-size: 13px; font-weight: 600;
+  z-index: 200; opacity: 0; pointer-events: none;
+  transition: all 0.25s; white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="topbar-mark" href="https://ricorra.com">
+    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="100" cy="100" r="96" fill="#C49A3C"/>
+      <circle cx="100" cy="100" r="88" fill="none" stroke="#D4AA52" stroke-width="1.5" opacity="0.6"/>
+      <text x="100" y="100" text-anchor="middle" dominant-baseline="central"
+        font-family="'Cormorant Garamond',Georgia,serif" font-size="148" font-weight="400"
+        fill="#FAF8F4" opacity="0.42">₿</text>
+      <text x="100" y="100" text-anchor="middle" dominant-baseline="central"
+        font-family="'Cormorant Garamond',Georgia,serif" font-size="14" font-weight="300"
+        fill="#FAF8F4" letter-spacing="10" dy="-4">ricorra</text>
+    </svg>
+    <span class="topbar-wordmark">ricorra</span>
+  </a>
+  <div class="topbar-label">My Subscription</div>
+</header>
+
+<div class="page-wrap">
+
+  <!-- Loading -->
+  <div class="state-screen" id="loading-screen">
+    <div class="spinner"></div>
+    <div class="state-body">Loading your subscription…</div>
+  </div>
+
+  <!-- Error -->
+  <div class="state-screen" id="error-screen" style="display:none;">
+    <div style="font-size:36px;">∅</div>
+    <div class="state-title">Link expired</div>
+    <div class="state-body" id="error-body">This portal link has expired or is invalid. Check your email for a newer link, or contact the merchant directly.</div>
+    <a href="https://ricorra.com" style="margin-top:8px;font-size:13px;color:var(--amber-deep);font-weight:600;text-decoration:none;">Learn about Ricorra →</a>
+  </div>
+
+  <!-- Main portal UI -->
+  <div id="portal-screen" style="display:none;">
+
+    <!-- Status hero -->
+    <div class="status-hero" id="status-hero">
+      <div class="status-watermark">₿</div>
+      <div class="status-merchant" id="portal-merchant"></div>
+      <div class="status-plan" id="portal-plan"></div>
+      <div class="status-price" id="portal-price"></div>
+      <div class="status-badge">
+        <div class="status-dot" id="status-dot"></div>
+        <span id="status-label">Active</span>
+      </div>
+    </div>
+
+    <!-- Grace period warning -->
+    <div class="section" id="grace-section" style="display:none;">
+      <div class="grace-banner">
+        <div class="grace-icon">⚠️</div>
+        <div class="grace-text" id="grace-text"></div>
+      </div>
+    </div>
+
+    <!-- Subscription details -->
+    <div class="section" style="margin-top:14px;">
+      <div class="section-label">Subscription details</div>
+      <div class="info-card">
+        <div class="info-row">
+          <span class="info-label">Email</span>
+          <span class="info-val" id="portal-email" style="font-size:13px;font-family:var(--font-ui);"></span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Plan</span>
+          <span class="info-val" id="portal-plan-detail"></span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Billing</span>
+          <span class="info-val" id="portal-billing"></span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Next renewal</span>
+          <span class="info-val" id="portal-renewal"></span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Status</span>
+          <span class="info-val" id="portal-status-detail"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pay now button (shown when overdue or due soon) -->
+    <div class="section" id="pay-section" style="display:none;">
+      <a class="pay-btn" id="pay-now-btn" href="#" target="_blank">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Make a payment →
+      </a>
+    </div>
+
+    <!-- Payment history -->
+    <div class="section" style="margin-top:8px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div class="section-label" style="margin-bottom:0;">Payment history</div>
+        <button class="receipt-btn" onclick="downloadReceipt()" id="receipt-btn" style="display:none;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download receipt
+        </button>
+      </div>
+      <div class="info-card" id="history-list">
+        <div class="empty-history" id="history-empty">No payments on record yet.</div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="portal-footer">
+      <div class="portal-footer-brand">ricorra</div>
+      Subscriptions, self-sovereign.<br>
+      <a href="https://ricorra.com">ricorra.com</a> ·
+      <a href="https://ricorra.com/privacy">Privacy</a> ·
+      <a href="mailto:hello@ricorra.com">Support</a><br>
+      <span style="margin-top:6px;display:block;font-size:10px;">
+        Ricorra is a non-custodial platform. Payments go directly to merchants. Ricorra never holds funds.
+      </span>
+    </div>
+
+  </div><!-- /portal-screen -->
+
+</div><!-- /page-wrap -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+const API_BASE    = 'https://ricorra.io';
+const portalToken = new URLSearchParams(location.search).get('t') || '';
+let portalData    = null;
+
+async function init() {
+  if (!portalToken) {
+    showError('No portal link provided. Check your email for the correct link.');
+    return;
+  }
+  try {
+    const res  = await fetch(API_BASE + '/portal?t=' + portalToken, {
+      headers: { 'Accept': 'application/json' },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      showError(err.error || 'This portal link has expired. Check your email for a newer link.');
+      return;
+    }
+    portalData = await res.json();
+  } catch(e) {
+    showError('Could not load your subscription. Please check your connection and try again.');
+    return;
+  }
+
+  renderPortal();
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('portal-screen').style.display  = 'block';
+}
+
+function renderPortal() {
+  const d = portalData;
+
+  // Hero
+  const hero = document.getElementById('status-hero');
+  if (d.status === 'overdue')   hero.classList.add('overdue');
+  if (d.status === 'canceled')  hero.classList.add('canceled');
+
+  document.getElementById('portal-merchant').textContent = d.merchantName ? d.merchantName.toUpperCase() : 'RICORRA MERCHANT';
+  document.getElementById('portal-plan').textContent     = d.planName;
+  document.getElementById('portal-price').textContent    = '$' + d.priceUSD.toFixed(2) + ' / ' + (d.interval === 'annual' ? 'year' : 'month');
+
+  const dot   = document.getElementById('status-dot');
+  const label = document.getElementById('status-label');
+  if (d.status === 'active') {
+    label.textContent = 'Active';
+  } else if (d.status === 'overdue') {
+    dot.classList.add('overdue');
+    label.textContent = 'Payment overdue';
+  } else {
+    dot.classList.add('canceled');
+    label.textContent = 'Canceled';
+  }
+
+  // Grace period warning
+  if (d.status === 'overdue' && d.gracePeriodStarted) {
+    const graceStart  = new Date(d.gracePeriodStarted);
+    const daysInGrace = Math.floor((Date.now() - graceStart.getTime()) / 86400000);
+    const daysLeft    = Math.max(7 - daysInGrace, 0);
+    const graceSection = document.getElementById('grace-section');
+    const graceText    = document.getElementById('grace-text');
+    graceSection.style.display = 'block';
+    graceText.innerHTML = `Your payment is overdue. You have <strong>${daysLeft} day${daysLeft !== 1 ? 's' : ''}</strong> remaining in your grace period before your subscription is canceled. Make a payment to keep your subscription active.`;
+  }
+
+  // Details
+  document.getElementById('portal-email').textContent  = d.subscriberEmail;
+  document.getElementById('portal-plan-detail').textContent = d.planName + (d.planDesc ? ' — ' + d.planDesc : '');
+  document.getElementById('portal-billing').textContent = '$' + d.priceUSD.toFixed(2) + ' / ' + (d.interval === 'annual' ? 'year' : 'month');
+
+  const renewalEl = document.getElementById('portal-renewal');
+  if (d.nextRenewal) {
+    const renewDate = new Date(d.nextRenewal);
+    const daysOut   = Math.ceil((renewDate.getTime() - Date.now()) / 86400000);
+    const dateStr   = renewDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    renewalEl.textContent = dateStr + (daysOut > 0 ? ' (' + daysOut + ' days)' : '');
+    renewalEl.className   = 'info-val ' + (daysOut <= 3 ? 'amber' : daysOut <= 0 ? 'red' : '');
+  } else {
+    renewalEl.textContent = d.status === 'canceled' ? 'Ended' : '—';
+  }
+
+  const statusDetail = document.getElementById('portal-status-detail');
+  statusDetail.textContent = d.status === 'active' ? 'Active' : d.status === 'overdue' ? 'Overdue' : 'Canceled';
+  statusDetail.className   = 'info-val ' + (d.status === 'active' ? 'green' : d.status === 'overdue' ? 'amber' : '');
+
+  // Pay button — show if overdue or due within 7 days
+  if (d.status === 'overdue' || d.status === 'canceled' || (d.nextRenewal && Math.ceil((new Date(d.nextRenewal) - Date.now()) / 86400000) <= 7)) {
+    const paySection = document.getElementById('pay-section');
+    const payBtn     = document.getElementById('pay-now-btn');
+    paySection.style.display = 'block';
+    payBtn.href = d.paymentLink;
+  }
+
+  // Payment history
+  renderHistory(d.payments || []);
+}
+
+function renderHistory(payments) {
+  const list  = document.getElementById('history-list');
+  const empty = document.getElementById('history-empty');
+
+  if (payments.length === 0) {
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  // Show receipt button if has payments
+  document.getElementById('receipt-btn').style.display = 'inline-flex';
+
+  payments.forEach(pmt => {
+    const d       = new Date(pmt.timestamp);
+    const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const coin    = pmt.coin || 'BTC';
+    const icon    = coin === 'LN' ? '⚡' : '₿';
+    const btcStr  = pmt.btcAmount ? pmt.btcAmount.toFixed(6) + ' ' + coin : coin;
+
+    const row = document.createElement('div');
+    row.className = 'history-item';
+    row.innerHTML = `
+      <div class="history-icon">${icon}</div>
+      <div class="history-info">
+        <div class="history-date">${dateStr}</div>
+        <div class="history-coin">${btcStr}${pmt.txid ? ' · <a href="https://blockstream.info/tx/' + pmt.txid + '" target="_blank" style="color:var(--amber-deep);text-decoration:none;font-size:10px;">View on blockchain →</a>' : ''}</div>
+      </div>
+      <div class="history-amount">$${pmt.usd.toFixed(2)}</div>`;
+    list.appendChild(row);
+  });
+}
+
+function downloadReceipt() {
+  if (!portalData) return;
+  const d        = portalData;
+  const payments = d.payments || [];
+  if (payments.length === 0) { showToast('No payments to export'); return; }
+
+  const rows = [['Date','Plan','Amount USD','BTC Amount','Coin','Transaction ID']];
+  payments.forEach(p => {
+    rows.push([
+      new Date(p.timestamp).toLocaleDateString('en-US'),
+      d.planName,
+      p.usd.toFixed(2),
+      p.btcAmount ? p.btcAmount.toFixed(6) : '',
+      p.coin || 'BTC',
+      p.txid || '',
+    ]);
+  });
+
+  const csv  = rows.map(r => r.map(c => '"' + String(c).replace(/"/g,'""') + '"').join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'ricorra-receipt-' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Receipt downloaded!');
+}
+
+function showError(msg) {
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('error-screen').style.display   = 'flex';
+  const el = document.getElementById('error-body');
+  if (el) el.textContent = msg;
+}
+
+let toastTimeout;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+window.addEventListener('load', init);
+</script>
+</body>
+</html>

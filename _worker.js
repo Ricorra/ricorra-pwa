@@ -22,6 +22,18 @@ function generateToken(length = 32) {
   return token;
 }
 
+// ── Generate + store a portal token for a subscriber ──
+async function getPortalToken(subscriberEmail, merchantEmail, planId, env) {
+  const token   = generateToken(32);
+  const expires = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days
+  await env.DB.put(
+    `portal:${token}`,
+    JSON.stringify({ subscriberEmail, merchantEmail, planId, expires }),
+    { expirationTtl: 60 * 60 * 24 * 30 }
+  );
+  return token;
+}
+
 // ── Session middleware ───────────────────────────────
 async function getEmailFromSession(request, env) {
   const authHeader = request.headers.get('Authorization') || '';
@@ -395,6 +407,79 @@ async function getUniqueAmount(basePrice, shareToken, subscriberEmail) {
     }
   }
 
+  // ── GET /portal (public) — serve portal.html ────────
+  if (method === 'GET' && url.pathname === '/portal') {
+    const accept = request.headers.get('Accept') || '';
+    if (!accept.includes('application/json')) {
+      return env.ASSETS.fetch(new Request(new URL('/portal.html', request.url), request));
+    }
+
+    // API fetch — return subscriber data
+    const token = url.searchParams.get('t') || '';
+    if (!token) return json({ error: 'Invalid portal link' }, 400);
+
+    let record;
+    try {
+      const raw = await env.DB.get(`portal:${token}`);
+      if (!raw) return json({ error: 'Portal link expired or invalid' }, 404);
+      record = JSON.parse(raw);
+    } catch { return json({ error: 'Invalid portal link' }, 400); }
+
+    if (Date.now() > record.expires) {
+      await env.DB.delete(`portal:${token}`);
+      return json({ error: 'Portal link expired' }, 410);
+    }
+
+    const { subscriberEmail, merchantEmail, planId } = record;
+
+    // Load sync data to find subscriber
+    let syncData;
+    try {
+      const raw = await env.DB.get(`merchant:${merchantEmail}:sync`);
+      if (!raw) return json({ error: 'Subscription not found' }, 404);
+      syncData = JSON.parse(raw);
+    } catch { return json({ error: 'Subscription not found' }, 404); }
+
+    const subscriber = (syncData.subscribers || []).find(
+      s => s.email === subscriberEmail && s.planId === planId
+    );
+    if (!subscriber) return json({ error: 'Subscription not found' }, 404);
+
+    const plan = (syncData.plans || []).find(p => p.id === planId);
+    if (!plan) return json({ error: 'Plan not found' }, 404);
+
+    // Get merchant name
+    let merchantName = '';
+    try {
+      const p = await env.DB.get(`merchant:${merchantEmail}:profile`);
+      if (p) merchantName = JSON.parse(p).displayName || '';
+    } catch {}
+
+    // Get subscriber's payments
+    const allPayments = syncData.payments || [];
+    const subPayments = allPayments
+      .filter(p => p.subscriberId === subscriber.id)
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+      .slice(0, 12); // last 12 payments
+
+    // Fresh payment link
+    const paymentLink = `https://ricorra.io/pay?t=${plan.shareToken}`;
+
+    return json({
+      subscriberEmail,
+      merchantName,
+      planName:    plan.name,
+      planDesc:    plan.desc    || '',
+      priceUSD:    plan.priceUSD,
+      interval:    plan.interval,
+      status:      subscriber.status,
+      nextRenewal: subscriber.nextRenewal || null,
+      gracePeriodStarted: subscriber.gracePeriodStarted || null,
+      paymentLink,
+      payments:    subPayments,
+    });
+  }
+
   // ── 404 ──────────────────────────────────────────────
   return json({ error: 'Not found' }, 404);
 }
@@ -418,13 +503,16 @@ async function fetchBTCRateForCron() {
   return 0;
 }
 
-function buildReminderEmail({ merchantName, subscriberEmail, planName, priceUSD, btcAmount, paymentLink, daysUntil, interval }) {
+function buildReminderEmail({ merchantName, subscriberEmail, planName, priceUSD, btcAmount, paymentLink, daysUntil, interval, portalLink }) {
   const btcStr     = btcAmount > 0 ? btcAmount.toFixed(6) + ' BTC' : '';
   const intervalStr= interval === 'annual' ? 'year' : 'month';
   const urgency    = daysUntil <= 1 ? 'today' : daysUntil <= 3 ? 'in ' + daysUntil + ' days' : 'in ' + daysUntil + ' days';
   const subject    = daysUntil <= 1
     ? `Your ${planName} subscription renews today`
     : `Your ${planName} subscription renews ${urgency}`;
+  const portalFooter = portalLink
+    ? `<a href="${portalLink}" style="color:#C49A3C;">Manage your subscription →</a> · `
+    : '';
 
   return {
     subject,
@@ -467,7 +555,7 @@ function buildReminderEmail({ merchantName, subscriberEmail, planName, priceUSD,
         </div>
         <p style="font-size:11px;color:#9A9690;text-align:center;line-height:1.6;">
           This is a non-custodial Bitcoin subscription. Your payment goes directly to the merchant's wallet.<br>
-          Ricorra never holds funds. <a href="https://ricorra.com" style="color:#C49A3C;">ricorra.com</a>
+          ${portalFooter}<a href="https://ricorra.com" style="color:#C49A3C;">ricorra.com</a>
         </p>
       </div>`,
   };
@@ -619,11 +707,13 @@ async function runCron(env) {
 
           // Send reminders at 7 days, 3 days, 1 day, and 0 days (due today)
           if ([7, 3, 1, 0].includes(daysUntil)) {
+            const portalToken = await getPortalToken(sub.email, email, sub.planId, env);
+            const portalLink  = `https://ricorra.io/portal?t=${portalToken}`;
             const { subject, html } = buildReminderEmail({
               merchantName, subscriberEmail: sub.email,
               planName: plan.name, priceUSD: plan.priceUSD,
               btcAmount, paymentLink, daysUntil,
-              interval: plan.interval,
+              interval: plan.interval, portalLink,
             });
             await sendEmail(sub.email, subject, html, env);
           }
