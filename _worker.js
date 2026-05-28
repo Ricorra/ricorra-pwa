@@ -226,7 +226,13 @@ async function handleRequest(request, env) {
 
     await env.DB.put(
       `merchant:${email}:profile`,
-      JSON.stringify({ displayName, updatedAt: Date.now() })
+      JSON.stringify({
+        displayName,
+        lightningAddress: (body.lightningAddress || '').trim() || null,
+        digestEnabled:    body.digestEnabled || false,
+        digestEmail:      (body.digestEmail   || '').trim() || null,
+        updatedAt:        Date.now(),
+      })
     );
 
     return json({ success: true, displayName });
@@ -897,6 +903,289 @@ async function runCron(env) {
 }
 
 // ═══════════════════════════════════════════════════════
+// AI WEEKLY DIGEST — Runs every Monday at 9am UTC
+// Uses Claude API to generate merchant triage summary
+// ═══════════════════════════════════════════════════════
+
+async function runWeeklyDigest(env) {
+  const now    = Date.now();
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const btcRate = await fetchBTCRateForCron();
+
+  let cursor;
+  do {
+    const list = await env.DB.list({ prefix: 'merchant:', cursor, limit: 100 });
+    cursor = list.list_complete ? null : list.cursor;
+
+    for (const key of list.keys) {
+      if (!key.name.endsWith(':sync')) continue;
+
+      let syncData;
+      try {
+        const raw = await env.DB.get(key.name);
+        if (!raw) continue;
+        syncData = JSON.parse(raw);
+      } catch { continue; }
+
+      const email       = key.name.replace('merchant:', '').replace(':sync', '');
+      const subscribers = syncData.subscribers || [];
+      const plans       = syncData.plans       || [];
+      const payments    = syncData.payments    || [];
+
+      if (subscribers.length === 0) continue;
+
+      // Load merchant profile for name + digest settings
+      let merchantName  = '';
+      let digestEmail   = email;
+      let digestEnabled = false;
+      try {
+        const p = await env.DB.get(`merchant:${email}:profile`);
+        if (p) {
+          const prof = JSON.parse(p);
+          merchantName  = prof.displayName    || '';
+          digestEmail   = prof.digestEmail    || email;
+          digestEnabled = prof.digestEnabled  || false;
+        }
+      } catch {}
+
+      // Skip if digest not enabled
+      if (!digestEnabled) continue;
+
+      // ── Build stats for Claude ──
+      const activeSubs   = subscribers.filter(s => s.status === 'active');
+      const overdueSubs  = subscribers.filter(s => s.status === 'overdue');
+      const canceledSubs = subscribers.filter(s => s.status === 'canceled');
+
+      // MRR
+      const mrr = plans
+        .filter(p => p.status === 'active')
+        .reduce((sum, p) => {
+          const monthly = p.interval === 'annual' ? p.priceUSD / 12 : p.priceUSD;
+          const subs    = activeSubs.filter(s => s.planId === p.id).length;
+          return sum + (monthly * subs);
+        }, 0);
+
+      // Revenue last 7 days vs prior 7 days
+      const week1 = payments.filter(p => now - new Date(p.timestamp).getTime() < 7 * DAY_MS)
+        .reduce((s, p) => s + p.usd, 0);
+      const week2 = payments.filter(p => {
+        const age = now - new Date(p.timestamp).getTime();
+        return age >= 7 * DAY_MS && age < 14 * DAY_MS;
+      }).reduce((s, p) => s + p.usd, 0);
+      const revTrend = week2 > 0 ? ((week1 - week2) / week2 * 100).toFixed(1) : null;
+
+      // Renewals due next 7 days
+      const renewalsDue = activeSubs.filter(s => {
+        if (!s.nextRenewal) return false;
+        const daysOut = Math.ceil((new Date(s.nextRenewal) - now) / DAY_MS);
+        return daysOut >= 0 && daysOut <= 7;
+      });
+
+      // Grace period subscribers with tenure
+      const graceDetails = overdueSubs.map(s => {
+        const plan = plans.find(p => p.id === s.planId);
+        const subPayments = payments.filter(p => p.subscriberId === s.id);
+        const firstPayment = subPayments.sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp))[0];
+        const monthsTenure = firstPayment
+          ? Math.floor((now - new Date(firstPayment.timestamp).getTime()) / (30 * DAY_MS))
+          : 0;
+        const daysInGrace = s.gracePeriodStarted
+          ? Math.floor((now - new Date(s.gracePeriodStarted).getTime()) / DAY_MS)
+          : 0;
+        return {
+          email:        s.email,
+          planName:     plan?.name || 'Unknown plan',
+          monthsTenure,
+          daysInGrace,
+          graceDaysLeft: Math.max(7 - daysInGrace, 0),
+        };
+      });
+
+      // Top plan by subscriber count
+      const topPlan = plans
+        .filter(p => p.status === 'active')
+        .map(p => ({ ...p, count: activeSubs.filter(s => s.planId === p.id).length }))
+        .sort((a, b) => b.count - a.count)[0];
+
+      // ── Call Claude API for triage ──
+      const statsContext = `
+Merchant: ${merchantName || email}
+Active subscribers: ${activeSubs.length}
+Overdue (in grace period): ${overdueSubs.length}
+Canceled (all time): ${canceledSubs.length}
+Monthly Recurring Revenue: $${mrr.toFixed(2)}
+Revenue last 7 days: $${week1.toFixed(2)}${revTrend ? ` (${revTrend > 0 ? '+' : ''}${revTrend}% vs prior week)` : ''}
+Renewals due next 7 days: ${renewalsDue.length}
+Top plan: ${topPlan ? `${topPlan.name} (${topPlan.count} subscribers)` : 'None'}
+${graceDetails.length > 0 ? `\nSubscribers in grace period:\n${graceDetails.map(g =>
+  `- ${g.email}: ${g.monthsTenure} months as customer, ${g.daysInGrace} days into grace, ${g.graceDaysLeft} days left`
+).join('\n')}` : ''}`.trim();
+
+      let aiTriage = '';
+      try {
+        const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+          method:  'POST',
+          headers: {
+            'Content-Type':      'application/json',
+            'x-api-key':         env.ANTHROPIC_API_KEY,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model:      'claude-sonnet-4-20250514',
+            max_tokens: 200,
+            system:     `You are a concise business advisor writing a 2-3 sentence weekly triage for a Bitcoin subscription merchant using Ricorra. Be specific, warm, and actionable. Focus on what needs attention. Never just restate numbers — synthesize them into insight. Mention specific subscribers by first name (from email) only when relevant. Keep it under 60 words.`,
+            messages: [{
+              role:    'user',
+              content: `Here's this week's data for my subscription business:\n\n${statsContext}\n\nWrite a brief triage summary.`,
+            }],
+          }),
+        });
+
+        if (claudeRes.ok) {
+          const claudeData = await claudeRes.json();
+          aiTriage = claudeData.content?.[0]?.text || '';
+        }
+      } catch(e) {
+        aiTriage = ''; // graceful fallback — digest still sends without AI triage
+      }
+
+      // ── Build and send digest email ──
+      const digestHtml = buildDigestEmail({
+        merchantName, email,
+        activeSubs:   activeSubs.length,
+        overdueSubs:  overdueSubs.length,
+        canceledSubs: canceledSubs.length,
+        mrr, week1, revTrend,
+        renewalsDue:  renewalsDue.length,
+        topPlan,
+        graceDetails,
+        aiTriage,
+        btcRate,
+      });
+
+      await sendEmail(
+        digestEmail,
+        `Your Ricorra weekly digest${merchantName ? ' · ' + merchantName : ''}`,
+        digestHtml,
+        env
+      );
+    }
+  } while (cursor);
+}
+
+function buildDigestEmail({ merchantName, email, activeSubs, overdueSubs, canceledSubs, mrr, week1, revTrend, renewalsDue, topPlan, graceDetails, aiTriage, btcRate }) {
+  const trendStr   = revTrend !== null
+    ? `<span style="color:${parseFloat(revTrend) >= 0 ? '#2D6A4F' : '#991B1B'};font-weight:700;">${parseFloat(revTrend) >= 0 ? '↑' : '↓'} ${Math.abs(revTrend)}% vs last week</span>`
+    : '';
+  const btcMRR     = btcRate > 0 ? (mrr / btcRate).toFixed(6) : null;
+  const dayName    = new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+
+  // Build Claude pre-filled prompt
+  const claudePrompt = [
+    `I run a Bitcoin subscription business called ${merchantName || 'my business'} using Ricorra (ricorra.io).`,
+    `This week's numbers: ${activeSubs} active subscribers, $${mrr.toFixed(2)} MRR, $${week1.toFixed(2)} revenue in the last 7 days${revTrend !== null ? ` (${parseFloat(revTrend) >= 0 ? '+' : ''}${revTrend}% vs prior week)` : ''}.`,
+    overdueSubs > 0 ? `${overdueSubs} subscriber${overdueSubs !== 1 ? 's are' : ' is'} in the grace period and may cancel.` : '',
+    renewalsDue > 0 ? `${renewalsDue} renewal${renewalsDue !== 1 ? 's' : ''} due this week.` : '',
+    topPlan ? `My top plan is "${topPlan.name}" at $${topPlan.priceUSD}/mo with ${topPlan.count} subscribers.` : '',
+    `What should I focus on this week to protect and grow my revenue?`,
+  ].filter(Boolean).join(' ');
+
+  const claudeUrl = `https://claude.ai/new?q=${encodeURIComponent(claudePrompt)}`;
+
+  return `
+    <div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;padding:2rem;color:#1C1C1A;background:#FAF8F4;">
+
+      <!-- Header -->
+      <div style="text-align:center;margin-bottom:1.5rem;">
+        <div style="display:inline-block;width:44px;height:44px;background:#C49A3C;border-radius:50%;line-height:44px;text-align:center;font-size:20px;color:#FAF8F4;">₿</div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:#6B6860;margin-top:8px;">Weekly Digest</div>
+        <div style="font-size:13px;color:#9A9690;margin-top:2px;">${dayName}</div>
+      </div>
+
+      ${aiTriage ? `
+      <!-- AI Triage -->
+      <div style="background:white;border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1.5rem;border-left:4px solid #C49A3C;border:1px solid #E2DDD6;border-left:4px solid #C49A3C;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:#9A9690;margin-bottom:8px;">This week</div>
+        <p style="font-size:14px;color:#1C1C1A;line-height:1.7;margin:0;font-style:italic;">"${aiTriage}"</p>
+      </div>` : ''}
+
+      <!-- Key metrics -->
+      <table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;">
+        <tr>
+          <td style="padding:10px 14px;background:white;border:1px solid #E2DDD6;border-radius:8px 0 0 8px;text-align:center;">
+            <div style="font-family:Georgia,serif;font-size:26px;font-weight:500;color:#1C1C1A;">$${mrr.toFixed(2)}</div>
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#6B6860;margin-top:3px;">MRR</div>
+            ${btcMRR ? `<div style="font-size:10px;color:#9A9690;">≈ ${btcMRR} BTC</div>` : ''}
+          </td>
+          <td style="width:8px;"></td>
+          <td style="padding:10px 14px;background:white;border:1px solid #E2DDD6;text-align:center;">
+            <div style="font-family:Georgia,serif;font-size:26px;font-weight:500;color:#1C1C1A;">${activeSubs}</div>
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#6B6860;margin-top:3px;">Active</div>
+          </td>
+          <td style="width:8px;"></td>
+          <td style="padding:10px 14px;background:white;border:1px solid #E2DDD6;border-radius:0 8px 8px 0;text-align:center;">
+            <div style="font-family:Georgia,serif;font-size:26px;font-weight:500;color:#1C1C1A;">$${week1.toFixed(2)}</div>
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#6B6860;margin-top:3px;">7-day rev ${trendStr}</div>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Attention needed -->
+      ${overdueSubs > 0 || renewalsDue > 0 ? `
+      <div style="background:white;border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1.5rem;border:1px solid #E2DDD6;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:#9A9690;margin-bottom:10px;">Needs attention</div>
+        ${overdueSubs > 0 ? `
+        <div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid #F2EFE9;">
+          <span style="color:#6B6860;">In grace period</span>
+          <span style="font-weight:700;color:#D97706;">${overdueSubs} subscriber${overdueSubs !== 1 ? 's' : ''}</span>
+        </div>` : ''}
+        ${renewalsDue > 0 ? `
+        <div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;">
+          <span style="color:#6B6860;">Renewals due this week</span>
+          <span style="font-weight:700;color:#1C1C1A;">${renewalsDue}</span>
+        </div>` : ''}
+      </div>` : ''}
+
+      <!-- Grace period detail -->
+      ${graceDetails.length > 0 ? `
+      <div style="background:#FEF3C7;border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1.5rem;border:1px solid #F59E0B;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:#92400E;margin-bottom:10px;">Grace period detail</div>
+        ${graceDetails.map(g => `
+        <div style="font-size:12px;padding:4px 0;border-bottom:1px solid rgba(245,158,11,0.3);">
+          <span style="font-weight:600;">${g.email.split('@')[0]}</span>
+          <span style="color:#92400E;"> · ${g.monthsTenure}mo customer · ${g.graceDaysLeft} days left</span>
+        </div>`).join('')}
+      </div>` : ''}
+
+      <!-- Top plan -->
+      ${topPlan ? `
+      <div style="background:white;border-radius:12px;padding:1rem 1.5rem;margin-bottom:1.5rem;border:1px solid #E2DDD6;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:#9A9690;margin-bottom:6px;">Top plan</div>
+        <div style="font-size:14px;font-weight:600;color:#1C1C1A;">${topPlan.name}</div>
+        <div style="font-size:12px;color:#6B6860;">$${topPlan.priceUSD.toFixed(2)} / ${topPlan.interval} · ${topPlan.count} subscriber${topPlan.count !== 1 ? 's' : ''}</div>
+      </div>` : ''}
+
+      <!-- Ask Claude -->
+      <div style="background:white;border-radius:12px;padding:1rem 1.5rem;margin-bottom:1.5rem;border:1px solid #E2DDD6;text-align:center;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#9A9690;margin-bottom:8px;">Need help thinking through this?</div>
+        <a href="CLAUDE_LINK_PLACEHOLDER"
+          style="display:inline-block;background:#1C1C1A;color:#FAF8F4;text-decoration:none;
+          padding:10px 24px;border-radius:50px;font-family:sans-serif;font-size:13px;font-weight:600;">
+          Ask Claude about my business →
+        </a>
+        <div style="font-size:10px;color:#9A9690;margin-top:8px;">Opens Claude AI with your weekly stats as context</div>
+      </div>
+
+      <!-- Footer -->
+      <p style="font-size:11px;color:#9A9690;text-align:center;line-height:1.8;">
+        <a href="https://ricorra.io" style="color:#C49A3C;font-weight:600;">Open Ricorra →</a><br>
+        Ricorra · Subscriptions, self-sovereign.<br>
+        <a href="https://ricorra.com" style="color:#9A9690;">ricorra.com</a>
+      </p>
+    </div>`.replace('CLAUDE_LINK_PLACEHOLDER', claudeUrl);
+}
+
+// ═══════════════════════════════════════════════════════
 // WALLET WATCHING — Runs every 30 minutes
 // Fetches recent txs from Blockstream, matches to subscribers
 // by uniquePriceUSD amount, auto-confirms payments
@@ -1146,7 +1435,6 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
-    // Route by cron schedule
     const cron = event.cron;
     if (cron === '*/30 * * * *') {
       // Every 30 minutes — wallet watching
@@ -1154,6 +1442,11 @@ export default {
     } else {
       // Daily 9am UTC — renewal reminders + grace period
       ctx.waitUntil(runCron(env));
+      // Monday only — AI weekly digest
+      const day = new Date().getUTCDay(); // 0=Sun, 1=Mon
+      if (day === 1) {
+        ctx.waitUntil(runWeeklyDigest(env));
+      }
     }
   },
 };

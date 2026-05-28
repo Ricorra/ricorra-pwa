@@ -1649,6 +1649,17 @@ body[dir="rtl"] .search-icon { left: auto; right: 26px; }
     </div>
   </div>
 
+  <!-- Ask Claude -->
+  <div style="padding:10px 16px 0;" id="ask-claude-wrap">
+    <div style="background:var(--charcoal);border-radius:14px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <div>
+        <div style="font-size:12px;font-weight:600;color:white;margin-bottom:2px;">Need business advice?</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.55);line-height:1.4;">Ask Claude about your subscriber stats, pricing, or growth strategy.</div>
+      </div>
+      <button onclick="openClaude()" style="background:var(--amber);color:white;border:none;border-radius:8px;padding:8px 14px;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:background 0.15s;" onmouseover="this.style.background='var(--amber-deep)'" onmouseout="this.style.background='var(--amber)'">Ask Claude →</button>
+    </div>
+  </div>
+
   <!-- Renewal outlook -->
   <div id="renewal-outlook-wrap" style="display:none;">
     <div class="header-row" style="padding-bottom:4px;padding-top:12px;">
@@ -3031,7 +3042,12 @@ async function saveSettings() {
         await fetch(API_BASE + '/merchant/profile', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-          body: JSON.stringify({ displayName: settings.displayName }),
+          body: JSON.stringify({
+            displayName:      settings.displayName,
+            lightningAddress: settings.lightningAddr || '',
+            digestEnabled:    settings.digestEnabled || false,
+            digestEmail:      settings.digestEmail   || '',
+          }),
         });
       }
       if (settings.btcWallet) {
@@ -4338,6 +4354,35 @@ function dismissInstallBanner() {
   document.getElementById('pwa-install-banner')?.remove();
   // Remember dismissal for 7 days
   try { localStorage.setItem('ricorra_install_dismissed', Date.now()); } catch(e) {}
+}
+
+// ── ASK CLAUDE ──────────────────────────────────────
+function openClaude() {
+  const mrr         = calcMRR();
+  const activeSubs  = subscribers.filter(s => s.status === 'active');
+  const overdueSubs = subscribers.filter(s => s.status === 'overdue');
+  const sym         = getCurrencySymbol();
+
+  const now    = Date.now();
+  const DAY_MS = 86400000;
+  const week1  = payments
+    .filter(p => now - new Date(p.timestamp).getTime() < 7 * DAY_MS)
+    .reduce((s, p) => s + p.usd, 0);
+
+  const topPlan = plans
+    .filter(p => p.status === 'active')
+    .map(p => ({ ...p, count: activeSubs.filter(s => s.planId === p.id).length }))
+    .sort((a, b) => b.count - a.count)[0];
+
+  const prompt = [
+    `I run a Bitcoin subscription business${settings.displayName ? ' called ' + settings.displayName : ''} using Ricorra (ricorra.io).`,
+    `Current stats: ${activeSubs.length} active subscribers, ${sym}${formatNum(mrr * fiatRate, 2)} MRR, ${sym}${formatNum(week1 * fiatRate, 2)} revenue in the last 7 days.`,
+    overdueSubs.length > 0 ? `${overdueSubs.length} subscriber${overdueSubs.length !== 1 ? 's are' : ' is'} currently overdue.` : '',
+    topPlan ? `My top plan is "${topPlan.name}" at $${topPlan.priceUSD}/${topPlan.interval} with ${topPlan.count} subscriber${topPlan.count !== 1 ? 's' : ''}.` : '',
+    `What should I focus on to protect and grow my revenue?`,
+  ].filter(Boolean).join(' ');
+
+  window.open('https://claude.ai/new?q=' + encodeURIComponent(prompt), '_blank');
 }
 
 // ── TOPBAR GREETING (shows display name when set) ──
