@@ -685,6 +685,223 @@ async function runCron(env) {
   } while (cursor);
 }
 
+// ═══════════════════════════════════════════════════════
+// WALLET WATCHING — Runs every 30 minutes
+// Fetches recent txs from Blockstream, matches to subscribers
+// by uniquePriceUSD amount, auto-confirms payments
+// ═══════════════════════════════════════════════════════
+
+async function runWalletWatch(env) {
+  const now    = Date.now();
+  const DAY_MS = 24 * 60 * 60 * 1000;
+
+  // Fetch live BTC rate for amount matching
+  const btcRate = await fetchBTCRateForCron();
+  if (btcRate === 0) return; // can't match without a rate
+
+  // List all merchant sync keys
+  let cursor;
+  do {
+    const list = await env.DB.list({ prefix: 'merchant:', cursor, limit: 100 });
+    cursor = list.list_complete ? null : list.cursor;
+
+    for (const key of list.keys) {
+      if (!key.name.endsWith(':sync')) continue;
+
+      let syncData;
+      try {
+        const raw = await env.DB.get(key.name);
+        if (!raw) continue;
+        syncData = JSON.parse(raw);
+      } catch { continue; }
+
+      const email       = key.name.replace('merchant:', '').replace(':sync', '');
+      const subscribers = syncData.subscribers || [];
+      const plans       = syncData.plans       || [];
+      const payments    = syncData.payments    || [];
+
+      if (subscribers.length === 0) continue;
+
+      // Get merchant wallet address
+      let walletAddress = '';
+      try {
+        const w = await env.DB.get(`merchant:${email}:wallet`);
+        if (w) walletAddress = JSON.parse(w).address;
+      } catch {}
+      if (!walletAddress) continue;
+
+      // Fetch recent transactions from Blockstream
+      let txs = [];
+      try {
+        const res = await fetch(
+          `https://blockstream.info/api/address/${walletAddress}/txs`,
+          { headers: { 'User-Agent': 'Ricorra/1.0' } }
+        );
+        if (!res.ok) continue;
+        txs = await res.json();
+      } catch { continue; }
+
+      if (!txs.length) continue;
+
+      // Load already-processed tx IDs to avoid double-matching
+      let processedTxs = new Set();
+      try {
+        const raw = await env.DB.get(`merchant:${email}:processed_txs`);
+        if (raw) processedTxs = new Set(JSON.parse(raw));
+      } catch {}
+
+      let syncChanged     = false;
+      let newProcessedTxs = [...processedTxs];
+
+      for (const tx of txs) {
+        if (processedTxs.has(tx.txid)) continue;
+
+        // Only look at confirmed transactions
+        if (!tx.status?.confirmed) continue;
+
+        // Get the amount received to our wallet address (in satoshis)
+        const received = (tx.vout || [])
+          .filter(v => v.scriptpubkey_address === walletAddress)
+          .reduce((sum, v) => sum + (v.value || 0), 0);
+
+        if (received === 0) continue;
+
+        const receivedUSD = (received / 100_000_000) * btcRate; // satoshis → BTC → USD
+        const txTime      = (tx.status?.block_time || 0) * 1000; // unix → ms
+
+        // Try to match to a subscriber
+        for (let i = 0; i < subscribers.length; i++) {
+          const sub  = subscribers[i];
+          if (sub.status !== 'active' && sub.status !== 'overdue') continue;
+
+          const plan = plans.find(p => p.id === sub.planId);
+          if (!plan) continue;
+
+          // Calculate expected unique amount for this subscriber
+          const expectedUSD = await getUniqueAmount(plan.priceUSD, plan.shareToken, sub.email);
+
+          // Match if within $0.10 tolerance (covers rate fluctuation)
+          const diff = Math.abs(receivedUSD - expectedUSD);
+          if (diff > 0.10) continue;
+
+          // Match found! Confirm the payment
+          const paymentId = 'pmt-' + tx.txid.slice(0, 8);
+
+          // Avoid logging the same payment twice
+          if (payments.find(p => p.id === paymentId)) continue;
+
+          // Log the payment
+          const btcAmount = received / 100_000_000;
+          payments.push({
+            id:           paymentId,
+            subscriberId: sub.id,
+            planId:       plan.id,
+            usd:          expectedUSD,
+            btcAmount,
+            coin:         'BTC',
+            timestamp:    txTime ? new Date(txTime).toISOString() : new Date().toISOString(),
+            note:         'Auto-confirmed via blockchain',
+            txid:         tx.txid,
+          });
+
+          // Update subscriber — reset to active, set next renewal
+          const currentRenewal = sub.nextRenewal ? new Date(sub.nextRenewal) : new Date();
+          const nextRenewal    = new Date(currentRenewal);
+          if (plan.interval === 'annual') {
+            nextRenewal.setFullYear(nextRenewal.getFullYear() + 1);
+          } else {
+            nextRenewal.setMonth(nextRenewal.getMonth() + 1);
+          }
+
+          subscribers[i].status             = 'active';
+          subscribers[i].nextRenewal        = nextRenewal.toISOString();
+          subscribers[i].gracePeriodStarted = null;
+          subscribers[i].payments           = [...(sub.payments || []), paymentId];
+          syncChanged = true;
+
+          // Send payment confirmation email
+          let merchantName = '';
+          try {
+            const p = await env.DB.get(`merchant:${email}:profile`);
+            if (p) merchantName = JSON.parse(p).displayName || '';
+          } catch {}
+
+          await sendEmail(
+            sub.email,
+            `Payment confirmed — ${plan.name}`,
+            buildConfirmationEmail({
+              merchantName, planName: plan.name,
+              priceUSD: expectedUSD, btcAmount,
+              nextRenewal: nextRenewal.toISOString(),
+              interval: plan.interval,
+            }),
+            env
+          );
+
+          newProcessedTxs.push(tx.txid);
+          break; // One tx matches one subscriber
+        }
+
+        newProcessedTxs.push(tx.txid);
+      }
+
+      // Save processed tx list (keep last 500 to avoid unbounded growth)
+      if (newProcessedTxs.length > processedTxs.size) {
+        const trimmed = newProcessedTxs.slice(-500);
+        await env.DB.put(
+          `merchant:${email}:processed_txs`,
+          JSON.stringify(trimmed)
+        );
+      }
+
+      // Write back sync data if anything changed
+      if (syncChanged) {
+        await env.DB.put(key.name, JSON.stringify({
+          ...syncData,
+          subscribers,
+          payments,
+          pushedAt: new Date().toISOString(),
+        }));
+      }
+    }
+  } while (cursor);
+}
+
+function buildConfirmationEmail({ merchantName, planName, priceUSD, btcAmount, nextRenewal, interval }) {
+  const nextDate    = new Date(nextRenewal).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const intervalStr = interval === 'annual' ? 'year' : 'month';
+  return `
+    <div style="font-family:Georgia,serif;max-width:480px;margin:0 auto;padding:2rem;color:#1C1C1A;background:#FAF8F4;">
+      <div style="text-align:center;margin-bottom:1.5rem;">
+        <div style="display:inline-block;width:48px;height:48px;background:#2D6A4F;border-radius:50%;line-height:48px;text-align:center;font-size:22px;color:white;">✓</div>
+      </div>
+      <h2 style="font-size:22px;font-weight:500;margin-bottom:0.5rem;text-align:center;">
+        Payment confirmed
+      </h2>
+      <p style="color:#6B6860;text-align:center;margin-bottom:1.5rem;font-size:14px;">
+        ${planName}${merchantName ? ' · ' + merchantName : ''}
+      </p>
+      <div style="background:white;border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1.5rem;border:1px solid #E2DDD6;">
+        <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid #E2DDD6;">
+          <span style="color:#6B6860;">Amount paid</span>
+          <span style="font-weight:600;">$${priceUSD.toFixed(2)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid #E2DDD6;">
+          <span style="color:#6B6860;">In Bitcoin</span>
+          <span style="font-weight:600;">${btcAmount.toFixed(6)} BTC</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;">
+          <span style="color:#6B6860;">Next renewal</span>
+          <span style="font-weight:600;">${nextDate}</span>
+        </div>
+      </div>
+      <p style="font-size:11px;color:#9A9690;text-align:center;line-height:1.6;">
+        Your subscription to ${planName} is active until ${nextDate}.<br>
+        <a href="https://ricorra.com" style="color:#C49A3C;">ricorra.com</a>
+      </p>
+    </div>`;
+}
+
 export default {
   async fetch(request, env, ctx) {
     try {
@@ -695,6 +912,14 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runCron(env));
+    // Route by cron schedule
+    const cron = event.cron;
+    if (cron === '*/30 * * * *') {
+      // Every 30 minutes — wallet watching
+      ctx.waitUntil(runWalletWatch(env));
+    } else {
+      // Daily 9am UTC — renewal reminders + grace period
+      ctx.waitUntil(runCron(env));
+    }
   },
 };
