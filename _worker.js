@@ -317,6 +317,24 @@ async function handleRequest(request, env) {
     return json({ success: true });
   }
 
+// ── Deterministic micro-offset for subscriber amounts ──
+// Same subscriber + same billing month always gets same offset
+// Max ±$0.05, never zero, never negative price
+async function getUniqueAmount(basePrice, shareToken, subscriberEmail) {
+  if (!subscriberEmail) return basePrice;
+  const now     = new Date();
+  const period  = `${now.getFullYear()}-${now.getMonth()}`;
+  const input   = `${shareToken}:${subscriberEmail}:${period}`;
+  const encoded = new TextEncoder().encode(input);
+  const hashBuf = await crypto.subtle.digest('SHA-256', encoded);
+  const hashArr = new Uint8Array(hashBuf);
+  // Use first two bytes to get offset between -5 and +5 cents
+  const raw     = ((hashArr[0] << 8) | hashArr[1]) % 11; // 0-10
+  const offset  = (raw - 5) / 100; // -0.05 to +0.05
+  const unique  = Math.max(basePrice + offset, 0.01);
+  return Math.round(unique * 100) / 100; // round to cents
+}
+
   // ── GET /pay (public — no auth) ─────────────────────
   if (method === 'GET' && url.pathname === '/subscribe') {
     const shareToken = url.searchParams.get('t') || '';
@@ -358,10 +376,15 @@ async function handleRequest(request, env) {
         }
       } catch {}
 
+    // Optional subscriber email for unique amount
+    const subscriberEmail = url.searchParams.get('e') || '';
+    const uniquePriceUSD  = await getUniqueAmount(record.priceUSD, shareToken, subscriberEmail);
+
       return json({
         planName:         record.name,
         planDesc:         record.desc     || '',
         priceUSD:         record.priceUSD,
+        uniquePriceUSD,
         interval:         record.interval,
         merchantName:     merchantName    || '',
         walletAddress:    walletAddress   || '',

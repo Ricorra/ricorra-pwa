@@ -720,6 +720,20 @@ body {
       </div>
     </div>
 
+    <!-- Subscriber email for unique amount -->
+    <div class="confirm-section" style="margin-bottom:0;">
+      <div class="section-label" style="margin-bottom:6px;">Your email (optional)</div>
+      <div style="display:flex;gap:8px;">
+        <input type="email" id="sub-email-input" placeholder="your@email.com"
+          style="flex:1;background:var(--parchment);border:1.5px solid var(--stone);border-radius:10px;
+          padding:10px 14px;font-family:var(--font-ui);font-size:14px;color:var(--charcoal);outline:none;"
+          value="" oninput="scheduleEmailRefetch(this.value)">
+      </div>
+      <div style="font-size:11px;color:var(--gray-text);margin-top:6px;line-height:1.5;">
+        Entering your email generates a unique payment amount for easy reconciliation. Never shared or stored on our servers.
+      </div>
+    </div>
+
     <!-- Confirm button -->
     <div class="confirm-section">
       <button class="confirm-btn" onclick="confirmPayment()">
@@ -793,8 +807,12 @@ async function init() {
   }
 
   // Fetch plan data from Worker
+  // Check for subscriber email in URL or localStorage
+  const savedEmail = localStorage.getItem('ricorra_sub_email') || '';
+  const emailParam = savedEmail ? '&e=' + encodeURIComponent(savedEmail) : '';
+
   try {
-    const res  = await fetch(API_BASE + '/subscribe?t=' + shareToken, {
+    const res  = await fetch(API_BASE + '/subscribe?t=' + shareToken + emailParam, {
       headers: { 'Accept': 'application/json' },
     });
     if (!res.ok) {
@@ -838,7 +856,9 @@ async function fetchBTCRate() {
 
 function updateBTCDisplay() {
   if (!planData) return;
-  const btcAmt = btcRate > 0 ? (planData.priceUSD / btcRate) : 0;
+  // Use uniquePriceUSD for the QR amount (subscriber-specific offset)
+  const displayPrice = planData.uniquePriceUSD || planData.priceUSD;
+  const btcAmt = btcRate > 0 ? (displayPrice / btcRate) : 0;
   const btcStr = btcAmt > 0 ? btcAmt.toFixed(6) + ' BTC' : '—';
 
   const priceBtcEl = document.getElementById('price-btc');
@@ -847,8 +867,11 @@ function updateBTCDisplay() {
   const detailBtc = document.getElementById('detail-btc-amount');
   if (detailBtc) detailBtc.textContent = btcStr;
 
+  const detailTotal = document.getElementById('detail-total');
+  if (detailTotal) detailTotal.textContent = '$' + displayPrice.toFixed(2);
+
   const detailLn = document.getElementById('detail-ln-amount');
-  if (detailLn) detailLn.textContent = '$' + planData.priceUSD.toFixed(2) + ' USD';
+  if (detailLn) detailLn.textContent = '$' + displayPrice.toFixed(2) + ' USD';
 
   // Rebuild QR with updated BTC amount
   if (activeMethod === 'btc' && planData.walletAddress) {
@@ -927,6 +950,33 @@ function switchMethod(method) {
   document.getElementById('btc-panel').style.display = method === 'btc' ? 'flex' : 'none';
   document.getElementById('ln-panel').style.display  = method === 'ln'  ? 'block' : 'none';
   document.getElementById('qr-section-label').textContent = method === 'btc' ? 'Scan to pay' : 'Send via Lightning';
+}
+
+// ── EMAIL REFETCH (unique amount) ───────────────────
+let emailRefetchTimer;
+function scheduleEmailRefetch(email) {
+  clearTimeout(emailRefetchTimer);
+  if (!email || !email.includes('@')) return;
+  emailRefetchTimer = setTimeout(() => refetchWithEmail(email), 800);
+}
+
+async function refetchWithEmail(email) {
+  try {
+    localStorage.setItem('ricorra_sub_email', email);
+    const res  = await fetch(API_BASE + '/subscribe?t=' + shareToken + '&e=' + encodeURIComponent(email), {
+      headers: { 'Accept': 'application/json' },
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    planData.uniquePriceUSD = data.uniquePriceUSD;
+    updateBTCDisplay();
+    // Show the unique amount note
+    const detailPrice = document.getElementById('detail-plan-price');
+    if (detailPrice && data.uniquePriceUSD !== data.priceUSD) {
+      detailPrice.innerHTML = '$' + data.uniquePriceUSD.toFixed(2) +
+        ' <span style="font-size:10px;color:var(--gray-text);font-family:var(--font-ui);">(your unique amount)</span>';
+    }
+  } catch(e) {}
 }
 
 // ── COPY ─────────────────────────────────────────────
