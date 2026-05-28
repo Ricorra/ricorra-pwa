@@ -1931,6 +1931,28 @@ body[dir="rtl"] .search-icon { left: auto; right: 26px; }
       </div>
     </div>
 
+    <!-- WEBHOOKS -->
+    <div class="settings-section">
+      <div class="settings-label">Webhooks</div>
+      <div class="settings-row">
+        <label>Webhook URL</label>
+        <input class="settings-input" id="settings-webhook-url" type="url" placeholder="https://your-server.com/webhook">
+        <div class="settings-hint">We'll POST subscription events here — payment confirmed, renewed, overdue, canceled, reactivated. Must be HTTPS.</div>
+      </div>
+      <div class="settings-row">
+        <label>Webhook Secret (optional)</label>
+        <input class="settings-input" id="settings-webhook-secret" type="text" placeholder="your-secret-key">
+        <div class="settings-hint">If set, each request includes an <code style="font-size:10px;background:var(--warm-white);padding:1px 5px;border-radius:4px;">X-Ricorra-Signature</code> HMAC-SHA256 header so you can verify it came from Ricorra.</div>
+      </div>
+      <div class="settings-row" style="padding-top:8px;">
+        <div class="settings-hint">
+          Works with <a href="https://zapier.com" target="_blank" style="color:var(--amber-deep);font-weight:600;text-decoration:none;">Zapier</a>,
+          <a href="https://make.com" target="_blank" style="color:var(--amber-deep);font-weight:600;text-decoration:none;">Make</a>,
+          Google Sheets, Notion, Discord, and any HTTP endpoint.
+        </div>
+      </div>
+    </div>
+
     <!-- TAX -->
     <div class="settings-section">
       <div class="settings-label" id="i18n-section-tax">Tax</div>
@@ -2147,6 +2169,8 @@ let settings = {
   taxRate:        '',
   digestEnabled:  false,
   digestEmail:    '',
+  webhookUrl:     '',
+  webhookSecret:  '',
 };
 let plans       = [];   // [{ id, name, priceUSD, interval, desc, status, createdAt, shareToken }]
 let subscribers = [];   // [{ id, email, planId, status, nextRenewal, payments[] }]
@@ -2992,6 +3016,11 @@ async function saveSettings() {
   if (digestEl) settings.digestEnabled = digestEl.checked;
   if (digestEmailEl) settings.digestEmail = digestEmailEl.value.trim();
 
+  const webhookUrlEl    = document.getElementById('settings-webhook-url');
+  const webhookSecretEl = document.getElementById('settings-webhook-secret');
+  if (webhookUrlEl)    settings.webhookUrl    = webhookUrlEl.value.trim();
+  if (webhookSecretEl) settings.webhookSecret = webhookSecretEl.value.trim();
+
   saveSettingsToStorage();
 
   // Push profile + wallet to server
@@ -3010,6 +3039,14 @@ async function saveSettings() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
           body: JSON.stringify({ address: settings.btcWallet }),
+        });
+      }
+      // Push webhook settings
+      if (settings.webhookUrl !== undefined) {
+        await fetch(API_BASE + '/merchant/webhook', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ webhookUrl: settings.webhookUrl, webhookSecret: settings.webhookSecret }),
         });
       }
     } catch(e) {}
@@ -4230,6 +4267,12 @@ function applySettings() {
   if (nameEl)  nameEl.value  = settings.displayName   || '';
   if (emailEl) emailEl.value = settings.email         || '';
   if (taxEl)   taxEl.value   = settings.taxRate       || '';
+
+  // Webhook fields
+  const webhookUrlEl    = document.getElementById('settings-webhook-url');
+  const webhookSecretEl = document.getElementById('settings-webhook-secret');
+  if (webhookUrlEl)    webhookUrlEl.value    = settings.webhookUrl    || '';
+  if (webhookSecretEl) webhookSecretEl.value = settings.webhookSecret || '';
 
   // Digest toggle + email
   const digestToggle = document.getElementById('digest-toggle');

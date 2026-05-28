@@ -300,6 +300,44 @@ async function handleRequest(request, env) {
     return json({ success: true });
   }
 
+  // ── GET /merchant/webhook ────────────────────────────
+  if (method === 'GET' && url.pathname === '/merchant/webhook') {
+    const email = await getEmailFromSession(request, env);
+    if (!email) return json({ error: 'Unauthorized' }, 401);
+    try {
+      const raw = await env.DB.get(`merchant:${email}:webhook`);
+      if (!raw) return json({ webhookUrl: '', webhookSecret: '' });
+      return json(JSON.parse(raw));
+    } catch {
+      return json({ webhookUrl: '', webhookSecret: '' });
+    }
+  }
+
+  // ── POST /merchant/webhook ───────────────────────────
+  if (method === 'POST' && url.pathname === '/merchant/webhook') {
+    const email = await getEmailFromSession(request, env);
+    if (!email) return json({ error: 'Unauthorized' }, 401);
+
+    let body;
+    try { body = await request.json(); } catch {
+      return json({ error: 'Invalid JSON' }, 400);
+    }
+
+    const webhookUrl    = (body.webhookUrl    || '').trim();
+    const webhookSecret = (body.webhookSecret || '').trim();
+
+    if (webhookUrl && !webhookUrl.startsWith('https://')) {
+      return json({ error: 'Webhook URL must use HTTPS' }, 400);
+    }
+
+    await env.DB.put(
+      `merchant:${email}:webhook`,
+      JSON.stringify({ webhookUrl, webhookSecret, updatedAt: Date.now() })
+    );
+
+    return json({ success: true });
+  }
+
   // ── POST /merchant/plans ─────────────────────────────
   // Called when a merchant creates or updates a plan — stores
   // plan data under plan:{shareToken} so /pay/ can look it up
@@ -482,6 +520,59 @@ async function getUniqueAmount(basePrice, shareToken, subscriberEmail) {
 
   // ── 404 ──────────────────────────────────────────────
   return json({ error: 'Not found' }, 404);
+}
+
+// ═══════════════════════════════════════════════════════
+// WEBHOOK HELPER — fires on all subscription lifecycle events
+// ═══════════════════════════════════════════════════════
+
+const WEBHOOK_EVENTS = {
+  PAYMENT_CONFIRMED:      'payment.confirmed',
+  SUBSCRIPTION_RENEWED:   'subscription.renewed',
+  SUBSCRIPTION_OVERDUE:   'subscription.overdue',
+  SUBSCRIPTION_CANCELED:  'subscription.canceled',
+  SUBSCRIPTION_REACTIVATED:'subscription.reactivated',
+};
+
+async function fireWebhook(merchantEmail, event, data, env) {
+  try {
+    const raw = await env.DB.get(`merchant:${merchantEmail}:webhook`);
+    if (!raw) return;
+    const { webhookUrl, webhookSecret } = JSON.parse(raw);
+    if (!webhookUrl) return;
+
+    const payload = {
+      event,
+      timestamp: new Date().toISOString(),
+      data,
+    };
+
+    // Sign the payload with HMAC-SHA256 if secret is set
+    let signature = '';
+    if (webhookSecret) {
+      const key    = await crypto.subtle.importKey(
+        'raw',
+        new TextEncoder().encode(webhookSecret),
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign']
+      );
+      const sig    = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(JSON.stringify(payload)));
+      signature    = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2,'0')).join('');
+    }
+
+    await fetch(webhookUrl, {
+      method:  'POST',
+      headers: {
+        'Content-Type':          'application/json',
+        'X-Ricorra-Event':       event,
+        'X-Ricorra-Signature':   signature,
+        'X-Ricorra-Timestamp':   Date.now().toString(),
+        'User-Agent':            'Ricorra-Webhooks/1.0',
+      },
+      body: JSON.stringify(payload),
+    });
+  } catch(e) { /* silent — webhook failures never block core logic */ }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -732,6 +823,15 @@ async function runCron(env) {
             subscribers[i].gracePeriodStarted  = new Date().toISOString();
             syncChanged = true;
 
+            // Fire webhook
+            await fireWebhook(email, WEBHOOK_EVENTS.SUBSCRIPTION_OVERDUE, {
+              subscriberEmail: sub.email,
+              planName: plan.name,
+              planId: plan.id,
+              priceUSD: plan.priceUSD,
+              interval: plan.interval,
+            }, env);
+
             // Send first grace period email
             const { subject, html } = buildGraceEmail({
               merchantName, planName: plan.name,
@@ -752,6 +852,15 @@ async function runCron(env) {
             // Grace period expired → cancel subscription
             subscribers[i].status = 'canceled';
             syncChanged = true;
+
+            // Fire webhook
+            await fireWebhook(email, WEBHOOK_EVENTS.SUBSCRIPTION_CANCELED, {
+              subscriberEmail: sub.email,
+              planName: plan.name,
+              planId: plan.id,
+              priceUSD: plan.priceUSD,
+              interval: plan.interval,
+            }, env);
 
             const cancelPortalToken = await getPortalToken(sub.email, email, sub.planId, env);
             const cancelPortalLink  = `https://ricorra.io/portal?t=${cancelPortalToken}`;
@@ -920,6 +1029,29 @@ async function runWalletWatch(env) {
           subscribers[i].gracePeriodStarted = null;
           subscribers[i].payments           = [...(sub.payments || []), paymentId];
           syncChanged = true;
+
+          // Fire payment.confirmed webhook
+          await fireWebhook(email, WEBHOOK_EVENTS.PAYMENT_CONFIRMED, {
+            subscriberEmail: sub.email,
+            planName:   plan.name,
+            planId:     plan.id,
+            priceUSD:   expectedUSD,
+            btcAmount,
+            coin:       'BTC',
+            txid:       tx.txid,
+            nextRenewal: nextRenewal.toISOString(),
+          }, env);
+
+          // Fire subscription.renewed webhook
+          await fireWebhook(email, WEBHOOK_EVENTS.SUBSCRIPTION_RENEWED, {
+            subscriberEmail: sub.email,
+            planName:    plan.name,
+            planId:      plan.id,
+            priceUSD:    expectedUSD,
+            interval:    plan.interval,
+            nextRenewal: nextRenewal.toISOString(),
+            wasOverdue:  sub.status === 'overdue',
+          }, env);
 
           // Send payment confirmation email
           let merchantName = '';
