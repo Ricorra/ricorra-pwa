@@ -376,6 +376,292 @@ async function handleRequest(request, env) {
   return json({ error: 'Not found' }, 404);
 }
 
+// ═══════════════════════════════════════════════════════
+// CRON — Renewal reminders + grace period processing
+// Runs daily at 9am UTC via wrangler.toml trigger
+// ═══════════════════════════════════════════════════════
+
+async function fetchBTCRateForCron() {
+  try {
+    const res  = await fetch('https://blockchain.info/ticker');
+    const data = await res.json();
+    if (data.USD?.last) return data.USD.last;
+  } catch {}
+  try {
+    const res  = await fetch('https://api.coinbase.com/v2/exchange-rates?currency=BTC');
+    const data = await res.json();
+    if (data.data?.rates?.USD) return parseFloat(data.data.rates.USD);
+  } catch {}
+  return 0;
+}
+
+function buildReminderEmail({ merchantName, subscriberEmail, planName, priceUSD, btcAmount, paymentLink, daysUntil, interval }) {
+  const btcStr     = btcAmount > 0 ? btcAmount.toFixed(6) + ' BTC' : '';
+  const intervalStr= interval === 'annual' ? 'year' : 'month';
+  const urgency    = daysUntil <= 1 ? 'today' : daysUntil <= 3 ? 'in ' + daysUntil + ' days' : 'in ' + daysUntil + ' days';
+  const subject    = daysUntil <= 1
+    ? `Your ${planName} subscription renews today`
+    : `Your ${planName} subscription renews ${urgency}`;
+
+  return {
+    subject,
+    html: `
+      <div style="font-family:Georgia,serif;max-width:480px;margin:0 auto;padding:2rem;color:#1C1C1A;background:#FAF8F4;">
+        <div style="text-align:center;margin-bottom:1.5rem;">
+          <div style="display:inline-block;width:48px;height:48px;background:#C49A3C;border-radius:50%;line-height:48px;text-align:center;font-size:22px;color:#FAF8F4;">₿</div>
+        </div>
+        <h2 style="font-size:22px;font-weight:500;margin-bottom:0.5rem;text-align:center;">
+          Your subscription renews ${urgency}
+        </h2>
+        <p style="color:#6B6860;text-align:center;margin-bottom:1.5rem;font-size:14px;">
+          ${planName}${merchantName ? ' · ' + merchantName : ''}
+        </p>
+        <div style="background:white;border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1.5rem;border:1px solid #E2DDD6;">
+          <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid #E2DDD6;">
+            <span style="color:#6B6860;">Plan</span>
+            <span style="font-weight:600;">${planName}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid #E2DDD6;">
+            <span style="color:#6B6860;">Amount</span>
+            <span style="font-weight:600;">$${priceUSD.toFixed(2)} / ${intervalStr}</span>
+          </div>
+          ${btcStr ? `
+          <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid #E2DDD6;">
+            <span style="color:#6B6860;">In Bitcoin</span>
+            <span style="font-weight:600;">${btcStr}</span>
+          </div>` : ''}
+          <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;">
+            <span style="color:#6B6860;">Renews</span>
+            <span style="font-weight:600;color:${daysUntil <= 1 ? '#991B1B' : daysUntil <= 3 ? '#D97706' : '#1C1C1A'};">${urgency}</span>
+          </div>
+        </div>
+        <div style="text-align:center;margin-bottom:1.5rem;">
+          <a href="${paymentLink}"
+            style="display:inline-block;background:#C49A3C;color:#FAF8F4;text-decoration:none;
+            padding:13px 32px;border-radius:50px;font-family:sans-serif;font-size:14px;font-weight:600;">
+            Pay now →
+          </a>
+        </div>
+        <p style="font-size:11px;color:#9A9690;text-align:center;line-height:1.6;">
+          This is a non-custodial Bitcoin subscription. Your payment goes directly to the merchant's wallet.<br>
+          Ricorra never holds funds. <a href="https://ricorra.com" style="color:#C49A3C;">ricorra.com</a>
+        </p>
+      </div>`,
+  };
+}
+
+function buildGraceEmail({ merchantName, planName, priceUSD, paymentLink, graceDaysLeft }) {
+  return {
+    subject: `Action needed — your ${planName} subscription payment is overdue`,
+    html: `
+      <div style="font-family:Georgia,serif;max-width:480px;margin:0 auto;padding:2rem;color:#1C1C1A;background:#FAF8F4;">
+        <div style="text-align:center;margin-bottom:1.5rem;">
+          <div style="display:inline-block;width:48px;height:48px;background:#C49A3C;border-radius:50%;line-height:48px;text-align:center;font-size:22px;color:#FAF8F4;">₿</div>
+        </div>
+        <h2 style="font-size:22px;font-weight:500;margin-bottom:0.5rem;text-align:center;">
+          Your payment is overdue
+        </h2>
+        <p style="color:#6B6860;text-align:center;margin-bottom:1.5rem;font-size:14px;">
+          ${planName}${merchantName ? ' · ' + merchantName : ''}
+        </p>
+        <div style="background:#FEF3C7;border-radius:12px;padding:1rem 1.5rem;margin-bottom:1.5rem;border:1px solid #F59E0B;">
+          <p style="font-size:13px;color:#92400E;margin:0;line-height:1.6;">
+            Your subscription payment of <strong>$${priceUSD.toFixed(2)}</strong> is overdue.
+            You have <strong>${graceDaysLeft} day${graceDaysLeft !== 1 ? 's' : ''}</strong> remaining
+            in your grace period before your subscription is canceled.
+          </p>
+        </div>
+        <div style="text-align:center;margin-bottom:1.5rem;">
+          <a href="${paymentLink}"
+            style="display:inline-block;background:#C49A3C;color:#FAF8F4;text-decoration:none;
+            padding:13px 32px;border-radius:50px;font-family:sans-serif;font-size:14px;font-weight:600;">
+            Pay now to keep your subscription →
+          </a>
+        </div>
+        <p style="font-size:11px;color:#9A9690;text-align:center;line-height:1.6;">
+          Ricorra never charges you automatically. Send Bitcoin directly to keep your subscription active.<br>
+          <a href="https://ricorra.com" style="color:#C49A3C;">ricorra.com</a>
+        </p>
+      </div>`,
+  };
+}
+
+function buildCanceledEmail({ merchantName, planName, reactivationLink }) {
+  return {
+    subject: `Your ${planName} subscription has ended`,
+    html: `
+      <div style="font-family:Georgia,serif;max-width:480px;margin:0 auto;padding:2rem;color:#1C1C1A;background:#FAF8F4;">
+        <div style="text-align:center;margin-bottom:1.5rem;">
+          <div style="display:inline-block;width:48px;height:48px;background:#6B6860;border-radius:50%;line-height:48px;text-align:center;font-size:22px;color:#FAF8F4;">₿</div>
+        </div>
+        <h2 style="font-size:22px;font-weight:500;margin-bottom:0.5rem;text-align:center;">
+          Your subscription has ended
+        </h2>
+        <p style="color:#6B6860;text-align:center;margin-bottom:1.5rem;font-size:14px;">
+          ${planName}${merchantName ? ' · ' + merchantName : ''}
+        </p>
+        <p style="font-size:14px;color:#6B6860;text-align:center;margin-bottom:1.5rem;line-height:1.6;">
+          Your grace period has ended and your subscription has been canceled.
+          You can reactivate at any time by making a payment.
+        </p>
+        <div style="text-align:center;margin-bottom:1.5rem;">
+          <a href="${reactivationLink}"
+            style="display:inline-block;background:#1C1C1A;color:#FAF8F4;text-decoration:none;
+            padding:13px 32px;border-radius:50px;font-family:sans-serif;font-size:14px;font-weight:600;">
+            Reactivate my subscription →
+          </a>
+        </div>
+        <p style="font-size:11px;color:#9A9690;text-align:center;line-height:1.6;">
+          <a href="https://ricorra.com" style="color:#C49A3C;">ricorra.com</a>
+        </p>
+      </div>`,
+  };
+}
+
+async function sendEmail(to, subject, html, env) {
+  const res = await fetch('https://api.resend.com/emails', {
+    method:  'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${env.RESEND_API_KEY}`,
+    },
+    body: JSON.stringify({
+      from:    'Ricorra <hello@ricorra.com>',
+      to,
+      subject,
+      html,
+    }),
+  });
+  return res.ok;
+}
+
+async function runCron(env) {
+  const now        = Date.now();
+  const DAY_MS     = 24 * 60 * 60 * 1000;
+  const GRACE_DAYS = 7;
+
+  // Fetch live BTC rate once for all emails
+  const btcRate = await fetchBTCRateForCron();
+
+  // List all merchant sync keys
+  let cursor;
+  do {
+    const list = await env.DB.list({ prefix: 'merchant:', cursor, limit: 100 });
+    cursor = list.list_complete ? null : list.cursor;
+
+    for (const key of list.keys) {
+      // Only process sync keys
+      if (!key.name.endsWith(':sync')) continue;
+
+      let syncData;
+      try {
+        const raw = await env.DB.get(key.name);
+        if (!raw) continue;
+        syncData = JSON.parse(raw);
+      } catch { continue; }
+
+      const email       = key.name.replace('merchant:', '').replace(':sync', '');
+      const subscribers = syncData.subscribers || [];
+      const plans       = syncData.plans       || [];
+      const payments    = syncData.payments    || [];
+
+      if (subscribers.length === 0) continue;
+
+      // Load merchant name and wallet
+      let merchantName = '';
+      let walletAddress = '';
+      try {
+        const p = await env.DB.get(`merchant:${email}:profile`);
+        if (p) merchantName = JSON.parse(p).displayName || '';
+      } catch {}
+      try {
+        const w = await env.DB.get(`merchant:${email}:wallet`);
+        if (w) walletAddress = JSON.parse(w).address || '';
+      } catch {}
+
+      let syncChanged = false;
+
+      for (let i = 0; i < subscribers.length; i++) {
+        const sub  = subscribers[i];
+        const plan = plans.find(p => p.id === sub.planId);
+        if (!plan) continue;
+
+        const paymentLink     = `https://ricorra.io/pay?t=${plan.shareToken}`;
+        const btcAmount       = btcRate > 0 ? plan.priceUSD / btcRate : 0;
+
+        // ── ACTIVE subscribers: send renewal reminders ──
+        if (sub.status === 'active' && sub.nextRenewal) {
+          const renewalTs   = new Date(sub.nextRenewal).getTime();
+          const daysUntil   = Math.ceil((renewalTs - now) / DAY_MS);
+
+          // Send reminders at 7 days, 3 days, 1 day, and 0 days (due today)
+          if ([7, 3, 1, 0].includes(daysUntil)) {
+            const { subject, html } = buildReminderEmail({
+              merchantName, subscriberEmail: sub.email,
+              planName: plan.name, priceUSD: plan.priceUSD,
+              btcAmount, paymentLink, daysUntil,
+              interval: plan.interval,
+            });
+            await sendEmail(sub.email, subject, html, env);
+          }
+
+          // If renewal date has passed → move to grace period
+          if (renewalTs < now && daysUntil < 0) {
+            subscribers[i].status              = 'overdue';
+            subscribers[i].gracePeriodStarted  = new Date().toISOString();
+            syncChanged = true;
+
+            // Send first grace period email
+            const { subject, html } = buildGraceEmail({
+              merchantName, planName: plan.name,
+              priceUSD: plan.priceUSD, paymentLink,
+              graceDaysLeft: GRACE_DAYS,
+            });
+            await sendEmail(sub.email, subject, html, env);
+          }
+        }
+
+        // ── OVERDUE subscribers: daily grace period emails + auto-cancel ──
+        if (sub.status === 'overdue' && sub.gracePeriodStarted) {
+          const graceStartTs  = new Date(sub.gracePeriodStarted).getTime();
+          const daysInGrace   = Math.floor((now - graceStartTs) / DAY_MS);
+          const graceDaysLeft = GRACE_DAYS - daysInGrace;
+
+          if (graceDaysLeft <= 0) {
+            // Grace period expired → cancel subscription
+            subscribers[i].status = 'canceled';
+            syncChanged = true;
+
+            const { subject, html } = buildCanceledEmail({
+              merchantName, planName: plan.name,
+              reactivationLink: paymentLink,
+            });
+            await sendEmail(sub.email, subject, html, env);
+
+          } else {
+            // Still in grace period → daily nudge
+            const { subject, html } = buildGraceEmail({
+              merchantName, planName: plan.name,
+              priceUSD: plan.priceUSD, paymentLink,
+              graceDaysLeft,
+            });
+            await sendEmail(sub.email, subject, html, env);
+          }
+        }
+      }
+
+      // If any subscriber statuses changed, write back to KV
+      if (syncChanged) {
+        await env.DB.put(key.name, JSON.stringify({
+          ...syncData,
+          subscribers,
+          pushedAt: new Date().toISOString(),
+        }));
+      }
+    }
+  } while (cursor);
+}
+
 export default {
   async fetch(request, env, ctx) {
     try {
@@ -383,5 +669,9 @@ export default {
     } catch (err) {
       return json({ error: 'Internal server error', detail: err.message }, 500);
     }
+  },
+
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(runCron(env));
   },
 };

@@ -3271,7 +3271,7 @@ function openCreatePlan() {
   const title = document.getElementById('plan-modal-title');
   const sub   = document.getElementById('plan-modal-sub');
   if (title) title.textContent = t('new_plan') || 'New Plan';
-  if (sub)   sub.textContent   = t('form_plan_interval_hint') || 'Define your subscription — name, price, and billing interval.';
+  if (sub)   sub.textContent   = 'Define your subscription — name, price, and billing interval.';
   document.getElementById('plan-modal').classList.add('active');
   setTimeout(() => {
     const inp = document.getElementById('plan-name-input');
