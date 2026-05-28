@@ -793,7 +793,8 @@ body {
 'use strict';
 
 const API_BASE   = 'https://ricorra.io';
-const shareToken = new URLSearchParams(location.search).get('t') || '';
+const shareToken    = new URLSearchParams(location.search).get('t') || '';
+const isReactivate  = new URLSearchParams(location.search).get('reactivate') === '1';
 
 let planData     = null;
 let btcRate      = 0;
@@ -885,8 +886,8 @@ function renderPaymentPage() {
 
   // Header
   document.getElementById('merchant-name').textContent  = p.merchantName ? p.merchantName.toUpperCase() : 'RICORRA MERCHANT';
-  document.getElementById('plan-name').textContent      = p.planName;
-  document.getElementById('plan-desc').textContent      = p.planDesc || '';
+  document.getElementById('plan-name').textContent      = isReactivate ? 'Welcome back.' : p.planName;
+  document.getElementById('plan-desc').textContent      = isReactivate ? p.planName + ' — reactivate your subscription below.' : (p.planDesc || '');
   document.getElementById('price-usd').textContent      = '$' + p.priceUSD.toFixed(2);
   document.getElementById('price-interval').textContent = '/ ' + (p.interval === 'annual' ? 'year' : 'month');
 

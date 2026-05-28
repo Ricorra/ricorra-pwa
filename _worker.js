@@ -597,7 +597,8 @@ function buildGraceEmail({ merchantName, planName, priceUSD, paymentLink, graceD
   };
 }
 
-function buildCanceledEmail({ merchantName, planName, reactivationLink }) {
+function buildCanceledEmail({ merchantName, planName, reactivationLink, portalLink }) {
+  const manageLink = portalLink || reactivationLink;
   return {
     subject: `Your ${planName} subscription has ended`,
     html: `
@@ -613,15 +614,22 @@ function buildCanceledEmail({ merchantName, planName, reactivationLink }) {
         </p>
         <p style="font-size:14px;color:#6B6860;text-align:center;margin-bottom:1.5rem;line-height:1.6;">
           Your grace period has ended and your subscription has been canceled.
-          You can reactivate at any time by making a payment.
+          You can reactivate at any time — just make a payment and you'll be back instantly.
         </p>
-        <div style="text-align:center;margin-bottom:1.5rem;">
+        <div style="text-align:center;margin-bottom:1rem;">
           <a href="${reactivationLink}"
-            style="display:inline-block;background:#1C1C1A;color:#FAF8F4;text-decoration:none;
+            style="display:inline-block;background:#C49A3C;color:#FAF8F4;text-decoration:none;
             padding:13px 32px;border-radius:50px;font-family:sans-serif;font-size:14px;font-weight:600;">
             Reactivate my subscription →
           </a>
         </div>
+        ${portalLink ? `
+        <div style="text-align:center;margin-bottom:1.5rem;">
+          <a href="${portalLink}"
+            style="font-size:12px;color:#C49A3C;text-decoration:none;font-weight:600;">
+            View my subscription history →
+          </a>
+        </div>` : ''}
         <p style="font-size:11px;color:#9A9690;text-align:center;line-height:1.6;">
           <a href="https://ricorra.com" style="color:#C49A3C;">ricorra.com</a>
         </p>
@@ -745,9 +753,13 @@ async function runCron(env) {
             subscribers[i].status = 'canceled';
             syncChanged = true;
 
+            const cancelPortalToken = await getPortalToken(sub.email, email, sub.planId, env);
+            const cancelPortalLink  = `https://ricorra.io/portal?t=${cancelPortalToken}`;
+            const reactivationLink  = `${paymentLink}&reactivate=1`;
             const { subject, html } = buildCanceledEmail({
               merchantName, planName: plan.name,
-              reactivationLink: paymentLink,
+              reactivationLink,
+              portalLink: cancelPortalLink,
             });
             await sendEmail(sub.email, subject, html, env);
 
