@@ -396,9 +396,10 @@ let profileData = null;
 let username    = '';
 
 async function init() {
-  // Read username inside init so it's always after full page load
-  const pathMatch = location.pathname.match(/\/@?([a-z0-9_-]+)/i);
-  username = (pathMatch?.[1] || new URLSearchParams(location.search).get('u') || '').toLowerCase();
+  // Read username — query param first, then path
+  const qParam    = new URLSearchParams(location.search).get('u') || '';
+  const pathMatch = location.pathname.match(/\/@([a-z0-9_-]+)/i);
+  username = (qParam || pathMatch?.[1] || '').toLowerCase();
 
   if (!username) { showError(); return; }
 
