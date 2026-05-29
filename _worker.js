@@ -1313,6 +1313,8 @@ async function runWalletWatch(env) {
             nextRenewal.setMonth(nextRenewal.getMonth() + 1);
           }
 
+          const priorStatus = sub.status; // capture before update
+
           subscribers[i].status             = 'active';
           subscribers[i].nextRenewal        = nextRenewal.toISOString();
           subscribers[i].gracePeriodStarted = null;
@@ -1331,15 +1333,20 @@ async function runWalletWatch(env) {
             nextRenewal: nextRenewal.toISOString(),
           }, env);
 
-          // Fire subscription.renewed webhook
-          await fireWebhook(email, WEBHOOK_EVENTS.SUBSCRIPTION_RENEWED, {
+          // Fire subscription.reactivated if was canceled, else subscription.renewed
+          const lifecycleEvent = priorStatus === 'canceled'
+            ? WEBHOOK_EVENTS.SUBSCRIPTION_REACTIVATED
+            : WEBHOOK_EVENTS.SUBSCRIPTION_RENEWED;
+
+          await fireWebhook(email, lifecycleEvent, {
             subscriberEmail: sub.email,
             planName:    plan.name,
             planId:      plan.id,
             priceUSD:    expectedUSD,
             interval:    plan.interval,
             nextRenewal: nextRenewal.toISOString(),
-            wasOverdue:  sub.status === 'overdue',
+            wasOverdue:  priorStatus === 'overdue',
+            wasCancel:   priorStatus === 'canceled',
           }, env);
 
           // Send payment confirmation email
