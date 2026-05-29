@@ -451,6 +451,127 @@ async function getUniqueAmount(basePrice, shareToken, subscriberEmail) {
     }
   }
 
+  // ── POST /merchant/username ──────────────────────────
+  if (method === 'POST' && url.pathname === '/merchant/username') {
+    const email = await getEmailFromSession(request, env);
+    if (!email) return json({ error: 'Unauthorized' }, 401);
+
+    let body;
+    try { body = await request.json(); } catch {
+      return json({ error: 'Invalid JSON' }, 400);
+    }
+
+    const username = (body.username || '').toLowerCase().trim()
+      .replace(/[^a-z0-9_-]/g, ''); // alphanumeric, hyphens, underscores only
+
+    if (!username) return json({ error: 'Username required' }, 400);
+    if (username.length < 2)  return json({ error: 'Username must be at least 2 characters' }, 400);
+    if (username.length > 30) return json({ error: 'Username must be 30 characters or fewer' }, 400);
+
+    // Check if username is taken by another merchant
+    const existing = await env.DB.get(`username:${username}`);
+    if (existing && JSON.parse(existing).email !== email) {
+      return json({ error: 'Username already taken' }, 409);
+    }
+
+    // Free up old username if changing
+    try {
+      const profile = await env.DB.get(`merchant:${email}:profile`);
+      if (profile) {
+        const old = JSON.parse(profile).username;
+        if (old && old !== username) await env.DB.delete(`username:${old}`);
+      }
+    } catch {}
+
+    // Save username → email mapping for public lookup
+    await env.DB.put(`username:${username}`, JSON.stringify({ email, updatedAt: Date.now() }));
+
+    // Save bio + social links to profile
+    const bio         = (body.bio         || '').trim().slice(0, 280);
+    const website     = (body.website     || '').trim();
+    const twitter     = (body.twitter     || '').trim().replace(/^@/, '');
+    const instagram   = (body.instagram   || '').trim().replace(/^@/, '');
+    const nostr       = (body.nostr       || '').trim();
+
+    // Merge into existing profile
+    let existing_profile = {};
+    try {
+      const raw = await env.DB.get(`merchant:${email}:profile`);
+      if (raw) existing_profile = JSON.parse(raw);
+    } catch {}
+
+    await env.DB.put(
+      `merchant:${email}:profile`,
+      JSON.stringify({
+        ...existing_profile,
+        username,
+        bio,
+        website,
+        twitter,
+        instagram,
+        nostr,
+        updatedAt: Date.now(),
+      })
+    );
+
+    return json({ success: true, username, profileUrl: `https://ricorra.io/@${username}` });
+  }
+
+  // ── GET /@{username} — public merchant profile ────────
+  if (method === 'GET' && url.pathname.startsWith('/@')) {
+    const username = url.pathname.slice(2).toLowerCase();
+    if (!username) return json({ error: 'Not found' }, 404);
+
+    const accept = request.headers.get('Accept') || '';
+
+    // Browser → serve profile.html
+    if (!accept.includes('application/json')) {
+      return env.ASSETS.fetch(new Request(new URL('/profile.html', request.url), request));
+    }
+
+    // API fetch → return merchant profile + plans
+    const usernameRecord = await env.DB.get(`username:${username}`);
+    if (!usernameRecord) return json({ error: 'Profile not found' }, 404);
+
+    const { email } = JSON.parse(usernameRecord);
+
+    let profile = {};
+    try {
+      const raw = await env.DB.get(`merchant:${email}:profile`);
+      if (raw) profile = JSON.parse(raw);
+    } catch {}
+
+    // Load sync data for active plans
+    let activePlans = [];
+    try {
+      const raw = await env.DB.get(`merchant:${email}:sync`);
+      if (raw) {
+        const sync = JSON.parse(raw);
+        activePlans = (sync.plans || [])
+          .filter(p => p.status === 'active')
+          .map(p => ({
+            name:       p.name,
+            priceUSD:   p.priceUSD,
+            interval:   p.interval,
+            desc:       p.desc || '',
+            shareToken: p.shareToken,
+            paymentUrl: `https://ricorra.io/pay?t=${p.shareToken}`,
+          }));
+      }
+    } catch {}
+
+    return json({
+      username,
+      displayName: profile.displayName || username,
+      bio:         profile.bio         || '',
+      website:     profile.website     || '',
+      twitter:     profile.twitter     || '',
+      instagram:   profile.instagram   || '',
+      nostr:       profile.nostr       || '',
+      plans:       activePlans,
+    });
+  }
+
   // ── GET /portal (public) — serve portal.html ────────
   if (method === 'GET' && url.pathname === '/portal') {
     const accept = request.headers.get('Accept') || '';

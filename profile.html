@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#C49A3C">
+<meta id="og-title" property="og:title" content="Ricorra">
+<meta id="og-desc" property="og:description" content="Subscribe with Bitcoin">
+<meta property="og:image" content="https://ricorra.io/icon-512x512.png">
+<title id="page-title">Ricorra</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --amber:       #C49A3C;
+  --amber-light: #D4AA52;
+  --amber-pale:  #FAF0D7;
+  --amber-deep:  #9E7A28;
+  --parchment:   #FAF8F4;
+  --warm-white:  #F2EFE9;
+  --charcoal:    #1C1C1A;
+  --stone:       #E2DDD6;
+  --gray-text:   #6B6860;
+  --green:       #2D6A4F;
+  --shadow:      0 4px 24px rgba(0,0,0,0.07);
+  --shadow-lg:   0 16px 56px rgba(0,0,0,0.12);
+  --font-display:'Cormorant Garamond', Georgia, serif;
+  --font-ui:     'DM Sans', system-ui, sans-serif;
+}
+*,*::before,*::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+body {
+  font-family: var(--font-ui);
+  background: var(--parchment);
+  color: var(--charcoal);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--stone);
+  background: var(--parchment);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.topbar-brand {
+  display: flex; align-items: center; gap: 8px;
+  text-decoration: none;
+}
+.topbar-brand svg { width: 26px; height: 26px; }
+.topbar-wordmark {
+  font-family: var(--font-display);
+  font-size: 17px; font-weight: 400;
+  letter-spacing: 0.04em;
+  color: var(--charcoal);
+}
+.topbar-cta {
+  background: var(--amber);
+  color: white;
+  text-decoration: none;
+  border-radius: 50px;
+  padding: 7px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  transition: background 0.15s;
+}
+.topbar-cta:hover { background: var(--amber-deep); }
+
+/* ── PAGE WRAP ── */
+.page {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 0 24px 64px;
+}
+
+/* ── LOADING / ERROR ── */
+.state-screen {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-height: 60vh; padding: 40px 24px;
+  text-align: center; gap: 14px;
+}
+.spinner {
+  width: 32px; height: 32px;
+  border: 3px solid var(--stone);
+  border-top-color: var(--amber);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.state-title { font-family: var(--font-display); font-size: 24px; font-weight: 400; }
+.state-body  { font-size: 14px; color: var(--gray-text); line-height: 1.6; max-width: 280px; }
+
+/* ── PROFILE HEADER ── */
+.profile-header {
+  padding: 40px 0 28px;
+  animation: fadeUp 0.3s ease both;
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.profile-avatar {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background: var(--amber);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display);
+  font-size: 32px; font-weight: 400;
+  color: white;
+  margin-bottom: 16px;
+  border: 3px solid var(--amber-light);
+  box-shadow: 0 4px 16px rgba(196,154,60,0.25);
+}
+.profile-name {
+  font-family: var(--font-display);
+  font-size: 36px; font-weight: 400;
+  color: var(--charcoal);
+  letter-spacing: 0.01em;
+  margin-bottom: 4px;
+}
+.profile-handle {
+  font-size: 13px; color: var(--gray-text);
+  margin-bottom: 14px;
+  font-weight: 400;
+}
+.profile-bio {
+  font-size: 15px;
+  color: var(--charcoal);
+  line-height: 1.7;
+  max-width: 480px;
+  margin-bottom: 18px;
+  font-weight: 300;
+}
+.profile-links {
+  display: flex; gap: 10px; flex-wrap: wrap;
+}
+.profile-link {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--warm-white);
+  border: 1.5px solid var(--stone);
+  border-radius: 20px;
+  padding: 5px 13px;
+  font-size: 12px; font-weight: 600;
+  color: var(--gray-text);
+  text-decoration: none;
+  transition: all 0.15s;
+}
+.profile-link:hover { border-color: var(--amber); color: var(--amber-deep); }
+.profile-link svg {
+  width: 13px; height: 13px;
+  fill: none; stroke: currentColor;
+  stroke-width: 2; stroke-linecap: round;
+}
+
+/* ── DIVIDER ── */
+.profile-divider {
+  height: 1px;
+  background: var(--stone);
+  margin-bottom: 28px;
+}
+
+/* ── SECTION LABEL ── */
+.section-label {
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--gray-text);
+  margin-bottom: 16px;
+}
+
+/* ── PLAN CARDS ── */
+.plans-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  animation: fadeUp 0.4s ease 0.05s both;
+}
+@media (min-width: 480px) {
+  .plans-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.plan-card {
+  background: white;
+  border-radius: 18px;
+  border: 1.5px solid var(--stone);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s;
+}
+.plan-card:hover {
+  border-color: var(--amber);
+  box-shadow: 0 8px 32px rgba(196,154,60,0.12);
+  transform: translateY(-2px);
+}
+.plan-card-top {
+  height: 4px;
+  background: var(--amber);
+}
+.plan-card-body {
+  padding: 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.plan-name {
+  font-family: var(--font-display);
+  font-size: 20px; font-weight: 500;
+  color: var(--charcoal);
+  margin-bottom: 4px;
+  letter-spacing: 0.01em;
+}
+.plan-desc {
+  font-size: 13px; color: var(--gray-text);
+  line-height: 1.5;
+  margin-bottom: 16px;
+  flex: 1;
+}
+.plan-price-row {
+  display: flex; align-items: baseline; gap: 6px;
+  margin-bottom: 16px;
+}
+.plan-price {
+  font-family: var(--font-display);
+  font-size: 32px; font-weight: 400;
+  color: var(--charcoal);
+  line-height: 1;
+}
+.plan-period {
+  font-size: 13px; color: var(--gray-text);
+}
+.plan-btc {
+  font-size: 11px; color: var(--gray-text);
+  font-style: italic;
+  font-family: var(--font-display);
+}
+.plan-cta {
+  display: block;
+  width: 100%;
+  background: var(--amber);
+  color: white;
+  text-align: center;
+  text-decoration: none;
+  border-radius: 50px;
+  padding: 12px;
+  font-family: var(--font-ui);
+  font-size: 14px; font-weight: 600;
+  transition: all 0.15s;
+  border: none; cursor: pointer;
+}
+.plan-cta:hover { background: var(--amber-deep); }
+.plan-cta:active { transform: scale(0.98); }
+
+/* ── POWERED BY ── */
+.powered-by {
+  text-align: center;
+  padding: 32px 0 0;
+  font-size: 12px;
+  color: var(--gray-text);
+  animation: fadeUp 0.5s ease 0.1s both;
+}
+.powered-by a {
+  color: var(--amber-deep);
+  text-decoration: none;
+  font-weight: 600;
+}
+.powered-by-mark {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-bottom: 4px;
+}
+.powered-by-mark svg { width: 18px; height: 18px; }
+
+/* ── EMPTY PLANS ── */
+.empty-plans {
+  text-align: center;
+  padding: 40px 24px;
+  background: var(--warm-white);
+  border-radius: 16px;
+  border: 1px solid var(--stone);
+}
+.empty-plans-title {
+  font-family: var(--font-display);
+  font-size: 20px; font-weight: 400;
+  color: var(--charcoal);
+  margin-bottom: 8px;
+}
+.empty-plans-body {
+  font-size: 13px; color: var(--gray-text);
+  line-height: 1.6;
+}
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 32px;
+  left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--charcoal); color: var(--parchment);
+  padding: 10px 20px; border-radius: 50px;
+  font-size: 13px; font-weight: 600;
+  z-index: 200; opacity: 0; pointer-events: none;
+  transition: all 0.25s; white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- Topbar -->
+<header class="topbar">
+  <a class="topbar-brand" href="https://ricorra.com">
+    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="100" cy="100" r="96" fill="#C49A3C"/>
+      <circle cx="100" cy="100" r="88" fill="none" stroke="#D4AA52" stroke-width="1.5" opacity="0.6"/>
+      <text x="100" y="100" text-anchor="middle" dominant-baseline="central"
+        font-family="'Cormorant Garamond',Georgia,serif" font-size="148" font-weight="400"
+        fill="#FAF8F4" opacity="0.42">₿</text>
+      <text x="100" y="100" text-anchor="middle" dominant-baseline="central"
+        font-family="'Cormorant Garamond',Georgia,serif" font-size="14" font-weight="300"
+        fill="#FAF8F4" letter-spacing="10" dy="-4">ricorra</text>
+    </svg>
+    <span class="topbar-wordmark">ricorra</span>
+  </a>
+  <a class="topbar-cta" href="https://ricorra.io">Start for free →</a>
+</header>
+
+<div class="page">
+
+  <!-- Loading -->
+  <div class="state-screen" id="loading-screen">
+    <div class="spinner"></div>
+    <div class="state-body">Loading profile…</div>
+  </div>
+
+  <!-- Error -->
+  <div class="state-screen" id="error-screen" style="display:none;">
+    <div style="font-size:36px;">∅</div>
+    <div class="state-title">Profile not found</div>
+    <div class="state-body">This merchant profile doesn't exist or has been removed.</div>
+    <a href="https://ricorra.com" style="margin-top:8px;font-size:13px;color:var(--amber-deep);font-weight:600;text-decoration:none;">Learn about Ricorra →</a>
+  </div>
+
+  <!-- Profile -->
+  <div id="profile-screen" style="display:none;">
+
+    <!-- Header -->
+    <div class="profile-header">
+      <div class="profile-avatar" id="profile-avatar">?</div>
+      <div class="profile-name" id="profile-name">Name</div>
+      <div class="profile-handle" id="profile-handle">@username · ricorra.io</div>
+      <div class="profile-bio" id="profile-bio" style="display:none;"></div>
+      <div class="profile-links" id="profile-links"></div>
+    </div>
+
+    <div class="profile-divider"></div>
+
+    <!-- Plans -->
+    <div class="section-label">Subscription Plans</div>
+    <div class="plans-grid" id="plans-grid">
+      <div class="empty-plans" id="plans-empty" style="display:none;">
+        <div class="empty-plans-title">No plans yet</div>
+        <div class="empty-plans-body">This merchant hasn't published any subscription plans yet.</div>
+      </div>
+    </div>
+
+    <!-- Powered by -->
+    <div class="powered-by">
+      <div class="powered-by-mark">
+        <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="100" cy="100" r="96" fill="#C49A3C"/>
+          <text x="100" y="100" text-anchor="middle" dominant-baseline="central"
+            font-family="Georgia,serif" font-size="130" font-weight="700"
+            fill="#FAF8F4" opacity="0.85">₿</text>
+        </svg>
+        <span style="font-weight:600;color:var(--charcoal);">Powered by Ricorra</span>
+      </div>
+      <div>Subscriptions, self-sovereign. <a href="https://ricorra.com">Start your own →</a></div>
+    </div>
+
+  </div><!-- /profile-screen -->
+
+</div><!-- /page -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+const API_BASE = 'https://ricorra.io';
+let btcRate    = 0;
+let profileData = null;
+
+// Get username from URL path: /@sarah → sarah
+const username = location.pathname.replace(/^\/@?/, '').split('/')[0].toLowerCase();
+
+async function init() {
+  if (!username) { showError(); return; }
+
+  // Fetch profile data
+  try {
+    const res = await fetch(API_BASE + '/@' + username, {
+      headers: { 'Accept': 'application/json' },
+    });
+    if (!res.ok) { showError(); return; }
+    profileData = await res.json();
+  } catch(e) { showError(); return; }
+
+  // Fetch BTC rate for plan prices
+  fetchBTCRate();
+
+  renderProfile();
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('profile-screen').style.display = 'block';
+
+  // Update page meta
+  const name = profileData.displayName || profileData.username;
+  document.getElementById('page-title').textContent = name + ' — Ricorra';
+  document.getElementById('og-title').content = name + ' · Ricorra';
+  document.getElementById('og-desc').content  = profileData.bio || 'Subscribe with Bitcoin';
+
+  setInterval(fetchBTCRate, 60000);
+}
+
+async function fetchBTCRate() {
+  try {
+    const res  = await fetch('https://blockchain.info/ticker');
+    const data = await res.json();
+    if (data.USD?.last) { btcRate = data.USD.last; updatePlanPrices(); }
+  } catch {}
+  try {
+    const res  = await fetch('https://api.coinbase.com/v2/exchange-rates?currency=BTC');
+    const data = await res.json();
+    if (data.data?.rates?.USD) { btcRate = parseFloat(data.data.rates.USD); updatePlanPrices(); }
+  } catch {}
+}
+
+function renderProfile() {
+  const d = profileData;
+
+  // Avatar — first letter of display name
+  const avatarEl = document.getElementById('profile-avatar');
+  avatarEl.textContent = (d.displayName || d.username || '?')[0].toUpperCase();
+
+  // Name + handle
+  document.getElementById('profile-name').textContent   = d.displayName || d.username;
+  document.getElementById('profile-handle').textContent = '@' + d.username + ' · ricorra.io/@' + d.username;
+
+  // Bio
+  if (d.bio) {
+    const bioEl = document.getElementById('profile-bio');
+    bioEl.textContent = d.bio;
+    bioEl.style.display = 'block';
+  }
+
+  // Social links
+  const linksEl = document.getElementById('profile-links');
+  const links = [];
+
+  if (d.website) links.push({
+    href:  d.website.startsWith('http') ? d.website : 'https://' + d.website,
+    label: d.website.replace(/^https?:\/\//, '').replace(/\/$/, ''),
+    icon:  `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`,
+  });
+  if (d.twitter) links.push({
+    href:  'https://x.com/' + d.twitter,
+    label: '@' + d.twitter,
+    icon:  `<svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.258 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`,
+  });
+  if (d.instagram) links.push({
+    href:  'https://instagram.com/' + d.instagram,
+    label: '@' + d.instagram,
+    icon:  `<svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor" stroke="none"/></svg>`,
+  });
+  if (d.nostr) links.push({
+    href:  'https://njump.me/' + d.nostr,
+    label: 'Nostr',
+    icon:  `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>`,
+  });
+
+  links.forEach(({ href, label, icon }) => {
+    const a = document.createElement('a');
+    a.className = 'profile-link';
+    a.href      = href;
+    a.target    = '_blank';
+    a.rel       = 'noopener';
+    a.innerHTML = icon + label;
+    linksEl.appendChild(a);
+  });
+
+  // Plans
+  renderPlans();
+}
+
+function renderPlans() {
+  const grid  = document.getElementById('plans-grid');
+  const empty = document.getElementById('plans-empty');
+  const plans = profileData?.plans || [];
+
+  // Remove old cards
+  grid.querySelectorAll('.plan-card').forEach(c => c.remove());
+
+  if (plans.length === 0) {
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  plans.forEach(plan => {
+    const intervalStr = plan.interval === 'annual' ? 'year' : 'month';
+    const btcStr = btcRate > 0
+      ? '≈ ' + (plan.priceUSD / btcRate).toFixed(6) + ' BTC'
+      : '';
+
+    const card = document.createElement('div');
+    card.className = 'plan-card';
+    card.innerHTML = `
+      <div class="plan-card-top"></div>
+      <div class="plan-card-body">
+        <div class="plan-name">${escHtml(plan.name)}</div>
+        <div class="plan-desc">${escHtml(plan.desc || 'Bitcoin subscription — payments go directly to the creator\'s wallet.')}</div>
+        <div class="plan-price-row">
+          <div class="plan-price">$${plan.priceUSD.toFixed(2)}</div>
+          <div class="plan-period">/ ${intervalStr}</div>
+        </div>
+        ${btcStr ? `<div class="plan-btc" id="btc-${plan.shareToken}">${btcStr}</div>` : `<div class="plan-btc" id="btc-${plan.shareToken}"></div>`}
+        <div style="margin-top:16px;">
+          <a class="plan-cta" href="${escHtml(plan.paymentUrl)}" target="_blank">Subscribe with Bitcoin →</a>
+        </div>
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+
+function updatePlanPrices() {
+  if (!profileData?.plans) return;
+  profileData.plans.forEach(plan => {
+    const el = document.getElementById('btc-' + plan.shareToken);
+    if (el && btcRate > 0) {
+      el.textContent = '≈ ' + (plan.priceUSD / btcRate).toFixed(6) + ' BTC';
+    }
+  });
+}
+
+function showError() {
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('error-screen').style.display   = 'flex';
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+let toastTimeout;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+window.addEventListener('load', init);
+</script>
+</body>
+</html>

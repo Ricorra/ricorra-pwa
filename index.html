@@ -1826,9 +1826,60 @@ body[dir="rtl"] .search-icon { left: auto; right: 26px; }
         <div class="settings-hint" id="i18n-hint-display-name">Shown on your public profile and subscriber emails.</div>
       </div>
       <div class="settings-row">
+        <label>Username</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span style="font-size:14px;color:var(--gray-text);flex-shrink:0;">ricorra.io/@</span>
+          <input class="settings-input" id="settings-username" type="text"
+            placeholder="yourname" style="flex:1;"
+            oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9_-]/g,'');updateUsernamePreview(this.value)">
+        </div>
+        <div class="settings-hint">Your public profile URL — share this everywhere.</div>
+        <div id="username-profile-link" style="display:none;margin-top:8px;">
+          <a id="username-profile-anchor" href="#" target="_blank"
+            style="font-size:12px;color:var(--amber-deep);font-weight:600;text-decoration:none;"></a>
+          <button onclick="copyProfileLink()" style="margin-left:10px;background:none;border:none;font-size:11px;color:var(--gray-text);cursor:pointer;font-family:var(--font-ui);">Copy</button>
+        </div>
+      </div>
+      <div class="settings-row">
+        <label>Bio</label>
+        <textarea class="settings-input" id="settings-bio" rows="3"
+          placeholder="Tell your subscribers what you do…"
+          maxlength="280"
+          style="resize:vertical;line-height:1.5;"></textarea>
+        <div class="settings-hint">Up to 280 characters. Shown on your public profile.</div>
+      </div>
+      <div class="settings-row">
         <label id="i18n-label-email">Email</label>
         <input class="settings-input" id="settings-email" type="email" readonly style="opacity:0.6;cursor:default;">
         <div class="settings-hint">Your login email. Contact support to change it.</div>
+      </div>
+    </div>
+
+    <!-- SOCIAL LINKS -->
+    <div class="settings-section">
+      <div class="settings-label">Public Profile Links</div>
+      <div class="settings-row">
+        <label>Website</label>
+        <input class="settings-input" id="settings-website" type="url" placeholder="https://yoursite.com">
+      </div>
+      <div class="settings-row">
+        <label>X / Twitter</label>
+        <div style="position:relative;">
+          <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--gray-text);">@</span>
+          <input class="settings-input" id="settings-twitter" type="text" placeholder="yourhandle" style="padding-left:28px;">
+        </div>
+      </div>
+      <div class="settings-row">
+        <label>Instagram</label>
+        <div style="position:relative;">
+          <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--gray-text);">@</span>
+          <input class="settings-input" id="settings-instagram" type="text" placeholder="yourhandle" style="padding-left:28px;">
+        </div>
+      </div>
+      <div class="settings-row">
+        <label>Nostr npub</label>
+        <input class="settings-input" id="settings-nostr" type="text" placeholder="npub1…">
+        <div class="settings-hint">Your Nostr public key. Links to your Nostr profile.</div>
       </div>
     </div>
 
@@ -2182,6 +2233,12 @@ let settings = {
   digestEmail:    '',
   webhookUrl:     '',
   webhookSecret:  '',
+  username:       '',
+  bio:            '',
+  website:        '',
+  twitter:        '',
+  instagram:      '',
+  nostr:          '',
 };
 let plans       = [];   // [{ id, name, priceUSD, interval, desc, status, createdAt, shareToken }]
 let subscribers = [];   // [{ id, email, planId, status, nextRenewal, payments[] }]
@@ -3032,6 +3089,20 @@ async function saveSettings() {
   if (webhookUrlEl)    settings.webhookUrl    = webhookUrlEl.value.trim();
   if (webhookSecretEl) settings.webhookSecret = webhookSecretEl.value.trim();
 
+  // Profile fields
+  const usernameEl  = document.getElementById('settings-username');
+  const bioEl       = document.getElementById('settings-bio');
+  const websiteEl   = document.getElementById('settings-website');
+  const twitterEl   = document.getElementById('settings-twitter');
+  const instagramEl = document.getElementById('settings-instagram');
+  const nostrEl     = document.getElementById('settings-nostr');
+  if (usernameEl)  settings.username  = usernameEl.value.trim();
+  if (bioEl)       settings.bio       = bioEl.value.trim();
+  if (websiteEl)   settings.website   = websiteEl.value.trim();
+  if (twitterEl)   settings.twitter   = twitterEl.value.trim().replace(/^@/, '');
+  if (instagramEl) settings.instagram = instagramEl.value.trim().replace(/^@/, '');
+  if (nostrEl)     settings.nostr     = nostrEl.value.trim();
+
   saveSettingsToStorage();
 
   // Push profile + wallet to server
@@ -3064,6 +3135,30 @@ async function saveSettings() {
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
           body: JSON.stringify({ webhookUrl: settings.webhookUrl, webhookSecret: settings.webhookSecret }),
         });
+      }
+      // Push username + profile
+      if (settings.username) {
+        const usernameRes = await fetch(API_BASE + '/merchant/username', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({
+            username:  settings.username,
+            bio:       settings.bio       || '',
+            website:   settings.website   || '',
+            twitter:   settings.twitter   || '',
+            instagram: settings.instagram || '',
+            nostr:     settings.nostr     || '',
+          }),
+        });
+        if (usernameRes.ok) {
+          updateUsernamePreview(settings.username);
+        } else {
+          const err = await usernameRes.json().catch(() => ({}));
+          if (err.error === 'Username already taken') {
+            showToast('Username @' + settings.username + ' is taken — try another');
+            return;
+          }
+        }
       }
     } catch(e) {}
   }
@@ -4290,6 +4385,20 @@ function applySettings() {
   if (webhookUrlEl)    webhookUrlEl.value    = settings.webhookUrl    || '';
   if (webhookSecretEl) webhookSecretEl.value = settings.webhookSecret || '';
 
+  // Profile fields
+  const usernameEl2  = document.getElementById('settings-username');
+  const bioEl2       = document.getElementById('settings-bio');
+  const websiteEl2   = document.getElementById('settings-website');
+  const twitterEl2   = document.getElementById('settings-twitter');
+  const instagramEl2 = document.getElementById('settings-instagram');
+  const nostrEl2     = document.getElementById('settings-nostr');
+  if (usernameEl2)  { usernameEl2.value  = settings.username  || ''; updateUsernamePreview(settings.username || ''); }
+  if (bioEl2)         bioEl2.value       = settings.bio       || '';
+  if (websiteEl2)     websiteEl2.value   = settings.website   || '';
+  if (twitterEl2)     twitterEl2.value   = settings.twitter   || '';
+  if (instagramEl2)   instagramEl2.value = settings.instagram || '';
+  if (nostrEl2)       nostrEl2.value     = settings.nostr     || '';
+
   // Digest toggle + email
   const digestToggle = document.getElementById('digest-toggle');
   const digestRow    = document.getElementById('digest-email-row');
@@ -4354,6 +4463,27 @@ function dismissInstallBanner() {
   document.getElementById('pwa-install-banner')?.remove();
   // Remember dismissal for 7 days
   try { localStorage.setItem('ricorra_install_dismissed', Date.now()); } catch(e) {}
+}
+
+// ── USERNAME PREVIEW ──────────────────────────────────
+function updateUsernamePreview(val) {
+  const linkWrap   = document.getElementById('username-profile-link');
+  const linkAnchor = document.getElementById('username-profile-anchor');
+  if (!linkWrap || !linkAnchor) return;
+  if (val && val.length >= 2) {
+    const url = 'https://ricorra.io/@' + val;
+    linkWrap.style.display   = 'block';
+    linkAnchor.textContent   = url;
+    linkAnchor.href          = url;
+  } else {
+    linkWrap.style.display = 'none';
+  }
+}
+
+function copyProfileLink() {
+  const username = settings.username || document.getElementById('settings-username')?.value.trim();
+  if (!username) return;
+  copyToClipboard('https://ricorra.io/@' + username, 'Profile link copied!');
 }
 
 // ── ASK CLAUDE ──────────────────────────────────────
