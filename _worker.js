@@ -175,6 +175,37 @@ async function handleRequest(request, env) {
     return json({ success: true, message: 'Logged out' });
   }
 
+  // ── GET /merchant/settings ───────────────────────────
+  // Returns full merchant settings for restoration after localStorage clear
+  if (method === 'GET' && url.pathname === '/merchant/settings') {
+    const email = await getEmailFromSession(request, env);
+    if (!email) return json({ error: 'Unauthorized' }, 401);
+
+    let profile = {};
+    let wallet  = {};
+    let webhook = {};
+
+    try { const r = await env.DB.get(`merchant:${email}:profile`); if (r) profile = JSON.parse(r); } catch {}
+    try { const r = await env.DB.get(`merchant:${email}:wallet`);  if (r) wallet  = JSON.parse(r); } catch {}
+    try { const r = await env.DB.get(`merchant:${email}:webhook`); if (r) webhook = JSON.parse(r); } catch {}
+
+    return json({
+      displayName:    profile.displayName    || '',
+      lightningAddr:  profile.lightningAddress || '',
+      digestEnabled:  profile.digestEnabled  || false,
+      digestEmail:    profile.digestEmail    || '',
+      username:       profile.username       || '',
+      bio:            profile.bio            || '',
+      website:        profile.website        || '',
+      twitter:        profile.twitter        || '',
+      instagram:      profile.instagram      || '',
+      nostr:          profile.nostr          || '',
+      btcWallet:      wallet.address         || '',
+      webhookUrl:     webhook.webhookUrl     || '',
+      webhookSecret:  webhook.webhookSecret  || '',
+    });
+  }
+
   // ── GET /merchant/dashboard ──────────────────────────
   if (method === 'GET' && url.pathname === '/merchant/dashboard') {
     const email = await getEmailFromSession(request, env);
@@ -517,12 +548,11 @@ async function getUniqueAmount(basePrice, shareToken, subscriberEmail) {
     return json({ success: true, username, profileUrl: `https://ricorra.io/@${username}` });
   }
 
-  // ── GET /@{username} — serve profile.html ────────────
+  // ── GET /@{username} — redirect to /profile?u= ───────
   if (method === 'GET' && url.pathname.startsWith('/@')) {
     const username = url.pathname.slice(2).split('/')[0].toLowerCase();
-    const profileUrl = new URL('/profile.html', request.url);
-    profileUrl.searchParams.set('u', username);
-    return env.ASSETS.fetch(new Request(profileUrl.toString(), request));
+    if (!username) return json({ error: 'Not found' }, 404);
+    return Response.redirect(`https://ricorra.io/profile?u=${encodeURIComponent(username)}`, 302);
   }
 
   // ── GET /profile — serve profile.html (Cloudflare may route here) ──
