@@ -3022,35 +3022,9 @@ async function checkSession() {
     });
     if (res.ok) {
       const data = await res.json();
-      settings.email       = data.email        || '';
-      settings.displayName = data.displayName  || '';
+      settings.email       = data.email       || '';
+      settings.displayName = data.displayName || '';
       settings.btcWallet   = data.walletAddress|| '';
-
-      // Also pull full settings from server to restore after localStorage clear
-      try {
-        const sRes = await fetch(API_BASE + '/merchant/settings', {
-          headers: { 'Authorization': 'Bearer ' + token },
-        });
-        if (sRes.ok) {
-          const sData = await sRes.json();
-          // Merge server settings — server wins for profile fields
-          settings.displayName   = sData.displayName   || settings.displayName;
-          settings.btcWallet     = sData.btcWallet      || settings.btcWallet;
-          settings.lightningAddr = sData.lightningAddr  || '';
-          settings.digestEnabled = sData.digestEnabled  || false;
-          settings.digestEmail   = sData.digestEmail    || '';
-          settings.username      = sData.username       || '';
-          settings.bio           = sData.bio            || '';
-          settings.website       = sData.website        || '';
-          settings.twitter       = sData.twitter        || '';
-          settings.instagram     = sData.instagram      || '';
-          settings.nostr         = sData.nostr          || '';
-          settings.webhookUrl    = sData.webhookUrl     || '';
-          settings.webhookSecret = sData.webhookSecret  || '';
-          saveSettingsToStorage();
-        }
-      } catch(e) {}
-
       showAppScreen();
     } else {
       clearSession();

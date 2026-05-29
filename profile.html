@@ -391,14 +391,15 @@ body {
 'use strict';
 
 const API_BASE = 'https://ricorra.io';
-let btcRate    = 0;
+let btcRate     = 0;
 let profileData = null;
-
-// Get username — try path first (/@sarah), fall back to ?u= query param
-const pathMatch = location.pathname.match(/\/@?([a-z0-9_-]+)/i);
-const username  = (pathMatch?.[1] || new URLSearchParams(location.search).get('u') || '').toLowerCase();
+let username    = '';
 
 async function init() {
+  // Read username inside init so it's always after full page load
+  const pathMatch = location.pathname.match(/\/@?([a-z0-9_-]+)/i);
+  username = (pathMatch?.[1] || new URLSearchParams(location.search).get('u') || '').toLowerCase();
+
   if (!username) { showError(); return; }
 
   // Fetch profile data
