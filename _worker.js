@@ -517,19 +517,24 @@ async function getUniqueAmount(basePrice, shareToken, subscriberEmail) {
     return json({ success: true, username, profileUrl: `https://ricorra.io/@${username}` });
   }
 
-  // ── GET /@{username} — public merchant profile ────────
+  // ── GET /@{username} — serve profile.html ────────────
   if (method === 'GET' && url.pathname.startsWith('/@')) {
-    const username = url.pathname.slice(2).toLowerCase();
-    if (!username) return json({ error: 'Not found' }, 404);
+    const username = url.pathname.slice(2).split('/')[0].toLowerCase();
+    const profileUrl = new URL('/profile.html', request.url);
+    profileUrl.searchParams.set('u', username);
+    return env.ASSETS.fetch(new Request(profileUrl.toString(), request));
+  }
 
-    const accept = request.headers.get('Accept') || '';
+  // ── GET /profile — serve profile.html (Cloudflare may route here) ──
+  if (method === 'GET' && url.pathname === '/profile') {
+    return env.ASSETS.fetch(new Request(new URL('/profile.html', request.url), request));
+  }
 
-    // Browser → serve profile.html
-    if (!accept.includes('application/json')) {
-      return env.ASSETS.fetch(new Request(new URL('/profile.html', request.url), request));
-    }
+  // ── GET /profile-data?u= — return merchant JSON ──────
+  if (method === 'GET' && url.pathname === '/profile-data') {
+    const username = (url.searchParams.get('u') || '').toLowerCase().trim();
+    if (!username) return json({ error: 'Username required' }, 400);
 
-    // API fetch → return merchant profile + plans
     const usernameRecord = await env.DB.get(`username:${username}`);
     if (!usernameRecord) return json({ error: 'Profile not found' }, 404);
 
@@ -541,7 +546,6 @@ async function getUniqueAmount(basePrice, shareToken, subscriberEmail) {
       if (raw) profile = JSON.parse(raw);
     } catch {}
 
-    // Load sync data for active plans
     let activePlans = [];
     try {
       const raw = await env.DB.get(`merchant:${email}:sync`);

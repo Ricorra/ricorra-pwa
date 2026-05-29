@@ -394,17 +394,16 @@ const API_BASE = 'https://ricorra.io';
 let btcRate    = 0;
 let profileData = null;
 
-// Get username from URL path: /@sarah → sarah
-const username = location.pathname.replace(/^\/@?/, '').split('/')[0].toLowerCase();
+// Get username — try path first (/@sarah), fall back to ?u= query param
+const pathMatch = location.pathname.match(/\/@?([a-z0-9_-]+)/i);
+const username  = (pathMatch?.[1] || new URLSearchParams(location.search).get('u') || '').toLowerCase();
 
 async function init() {
   if (!username) { showError(); return; }
 
   // Fetch profile data
   try {
-    const res = await fetch(API_BASE + '/@' + username, {
-      headers: { 'Accept': 'application/json' },
-    });
+    const res = await fetch(API_BASE + '/profile-data?u=' + encodeURIComponent(username));
     if (!res.ok) { showError(); return; }
     profileData = await res.json();
   } catch(e) { showError(); return; }
