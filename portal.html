@@ -276,6 +276,26 @@ body {
   margin-bottom: 2px;
 }
 /* Toast */
+/* ── PAUSE PILLS ── */
+.pause-pill {
+  flex: 1;
+  background: var(--warm-white);
+  border: 1.5px solid var(--stone);
+  border-radius: 50px;
+  padding: 8px 4px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-text);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.pause-pill.selected {
+  background: var(--charcoal);
+  border-color: var(--charcoal);
+  color: white;
+}
+
 .toast {
   position: fixed; bottom: 32px;
   left: 50%; transform: translateX(-50%) translateY(20px);
@@ -381,6 +401,46 @@ body {
       </a>
     </div>
 
+    <!-- Pause section (shown when active) -->
+    <div class="section" id="pause-section" style="display:none;margin-top:8px;">
+      <div class="section-label">Manage subscription</div>
+      <div class="info-card" style="padding:16px;">
+        <div id="pause-form">
+          <div style="font-size:13px;font-weight:600;color:var(--charcoal);margin-bottom:6px;">Pause my subscription</div>
+          <div style="font-size:12px;color:var(--gray-text);margin-bottom:12px;line-height:1.5;">
+            Take a break without canceling. Your subscription resumes automatically when the pause ends.
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:12px;">
+            <button onclick="selectPause(1)" id="pause-1"
+              class="pause-pill">1 month</button>
+            <button onclick="selectPause(2)" id="pause-2"
+              class="pause-pill">2 months</button>
+            <button onclick="selectPause(3)" id="pause-3"
+              class="pause-pill">3 months</button>
+          </div>
+          <button onclick="submitPause()" id="pause-submit-btn"
+            style="width:100%;background:var(--charcoal);color:white;border:none;border-radius:50px;
+            padding:12px;font-family:var(--font-ui);font-size:14px;font-weight:600;cursor:pointer;
+            opacity:0.4;pointer-events:none;transition:all 0.15s;">
+            Pause subscription
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Resume section (shown when paused) -->
+    <div class="section" id="resume-section" style="display:none;margin-top:8px;">
+      <div class="info-card" style="padding:16px;background:#FEF3C7;border:1px solid #F59E0B;">
+        <div style="font-size:13px;font-weight:600;color:#92400E;margin-bottom:4px;">⏸ Subscription paused</div>
+        <div style="font-size:12px;color:#92400E;margin-bottom:12px;line-height:1.5;" id="pause-until-text"></div>
+        <button onclick="submitResume()"
+          style="width:100%;background:#C49A3C;color:white;border:none;border-radius:50px;
+          padding:12px;font-family:var(--font-ui);font-size:14px;font-weight:600;cursor:pointer;">
+          Resume now
+        </button>
+      </div>
+    </div>
+
     <!-- Payment history -->
     <div class="section" style="margin-top:8px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
@@ -452,6 +512,7 @@ function renderPortal() {
   const hero = document.getElementById('status-hero');
   if (d.status === 'overdue')   hero.classList.add('overdue');
   if (d.status === 'canceled')  hero.classList.add('canceled');
+  if (d.status === 'paused')    hero.classList.add('canceled'); // gray hero for paused
 
   document.getElementById('portal-merchant').textContent = d.merchantName ? d.merchantName.toUpperCase() : 'RICORRA MERCHANT';
   document.getElementById('portal-plan').textContent     = d.planName;
@@ -461,6 +522,9 @@ function renderPortal() {
   const label = document.getElementById('status-label');
   if (d.status === 'active') {
     label.textContent = 'Active';
+  } else if (d.status === 'paused') {
+    dot.classList.add('canceled');
+    label.textContent = 'Paused';
   } else if (d.status === 'overdue') {
     dot.classList.add('overdue');
     label.textContent = 'Payment overdue';
@@ -481,12 +545,16 @@ function renderPortal() {
   }
 
   // Details
-  document.getElementById('portal-email').textContent  = d.subscriberEmail;
+  document.getElementById('portal-email').textContent       = d.subscriberEmail;
   document.getElementById('portal-plan-detail').textContent = d.planName + (d.planDesc ? ' — ' + d.planDesc : '');
-  document.getElementById('portal-billing').textContent = '$' + d.priceUSD.toFixed(2) + ' / ' + (d.interval === 'annual' ? 'year' : 'month');
+  document.getElementById('portal-billing').textContent     = '$' + d.priceUSD.toFixed(2) + ' / ' + (d.interval === 'annual' ? 'year' : 'month');
 
   const renewalEl = document.getElementById('portal-renewal');
-  if (d.nextRenewal) {
+  if (d.status === 'paused' && d.pauseUntil) {
+    const resumeDate = new Date(d.pauseUntil);
+    renewalEl.textContent = 'Resumes ' + resumeDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    renewalEl.className   = 'info-val amber';
+  } else if (d.nextRenewal) {
     const renewDate = new Date(d.nextRenewal);
     const daysOut   = Math.ceil((renewDate.getTime() - Date.now()) / 86400000);
     const dateStr   = renewDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
@@ -497,19 +565,90 @@ function renderPortal() {
   }
 
   const statusDetail = document.getElementById('portal-status-detail');
-  statusDetail.textContent = d.status === 'active' ? 'Active' : d.status === 'overdue' ? 'Overdue' : 'Canceled';
-  statusDetail.className   = 'info-val ' + (d.status === 'active' ? 'green' : d.status === 'overdue' ? 'amber' : '');
+  if (d.status === 'active')  { statusDetail.textContent = 'Active';  statusDetail.className = 'info-val green'; }
+  else if (d.status === 'paused')  { statusDetail.textContent = 'Paused';  statusDetail.className = 'info-val amber'; }
+  else if (d.status === 'overdue') { statusDetail.textContent = 'Overdue'; statusDetail.className = 'info-val amber'; }
+  else                             { statusDetail.textContent = 'Canceled'; statusDetail.className = 'info-val'; }
 
-  // Pay button — show if overdue or due within 7 days
-  if (d.status === 'overdue' || d.status === 'canceled' || (d.nextRenewal && Math.ceil((new Date(d.nextRenewal) - Date.now()) / 86400000) <= 7)) {
-    const paySection = document.getElementById('pay-section');
-    const payBtn     = document.getElementById('pay-now-btn');
-    paySection.style.display = 'block';
-    payBtn.href = d.paymentLink;
+  // Pay button — show if overdue, canceled, or due within 7 days
+  if (d.status === 'overdue' || d.status === 'canceled' ||
+      (d.nextRenewal && Math.ceil((new Date(d.nextRenewal) - Date.now()) / 86400000) <= 7)) {
+    document.getElementById('pay-section').style.display = 'block';
+    document.getElementById('pay-now-btn').href = d.paymentLink;
+  }
+
+  // Pause section — show if active
+  if (d.status === 'active') {
+    document.getElementById('pause-section').style.display = 'block';
+  }
+
+  // Resume section — show if paused
+  if (d.status === 'paused' && d.pauseUntil) {
+    document.getElementById('resume-section').style.display = 'block';
+    const resumeDate = new Date(d.pauseUntil).toLocaleDateString('en-US',
+      { month: 'long', day: 'numeric', year: 'numeric' });
+    document.getElementById('pause-until-text').textContent =
+      `Your subscription is paused and will resume automatically on ${resumeDate}.`;
   }
 
   // Payment history
   renderHistory(d.payments || []);
+}
+
+// ── PAUSE / RESUME ───────────────────────────────────
+let selectedPauseMonths = 0;
+
+function selectPause(months) {
+  selectedPauseMonths = months;
+  [1,2,3].forEach(n => {
+    const el = document.getElementById('pause-' + n);
+    if (el) el.classList.toggle('selected', n === months);
+  });
+  const btn = document.getElementById('pause-submit-btn');
+  if (btn) {
+    btn.style.opacity        = '1';
+    btn.style.pointerEvents  = 'auto';
+    btn.textContent          = `Pause for ${months} month${months > 1 ? 's' : ''}`;
+  }
+}
+
+async function submitPause() {
+  if (!selectedPauseMonths) return;
+  const btn = document.getElementById('pause-submit-btn');
+  if (btn) { btn.textContent = 'Pausing…'; btn.style.opacity = '0.6'; btn.style.pointerEvents = 'none'; }
+
+  try {
+    const res = await fetch(API_BASE + '/portal/pause', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ token: portalToken, months: selectedPauseMonths }),
+    });
+    if (!res.ok) throw new Error('Failed');
+    showToast('Subscription paused ✓');
+    setTimeout(() => location.reload(), 1200);
+  } catch(e) {
+    showToast('Something went wrong — please try again');
+    if (btn) { btn.textContent = `Pause for ${selectedPauseMonths} month${selectedPauseMonths > 1 ? 's' : ''}`; btn.style.opacity = '1'; btn.style.pointerEvents = 'auto'; }
+  }
+}
+
+async function submitResume() {
+  const btn = document.querySelector('#resume-section button');
+  if (btn) { btn.textContent = 'Resuming…'; btn.disabled = true; }
+
+  try {
+    const res = await fetch(API_BASE + '/portal/resume', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ token: portalToken }),
+    });
+    if (!res.ok) throw new Error('Failed');
+    showToast('Subscription resumed ✓');
+    setTimeout(() => location.reload(), 1200);
+  } catch(e) {
+    showToast('Something went wrong — please try again');
+    if (btn) { btn.textContent = 'Resume now'; btn.disabled = false; }
+  }
 }
 
 function renderHistory(payments) {

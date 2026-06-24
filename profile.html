@@ -352,6 +352,7 @@ body {
       <div class="profile-avatar" id="profile-avatar">?</div>
       <div class="profile-name" id="profile-name">Name</div>
       <div class="profile-handle" id="profile-handle">@username · ricorra.io</div>
+      <div id="profile-sub-count" style="display:none;font-size:12px;font-weight:600;color:var(--amber-deep);margin-bottom:10px;"></div>
       <div class="profile-bio" id="profile-bio" style="display:none;"></div>
       <div class="profile-links" id="profile-links"></div>
     </div>
@@ -450,6 +451,14 @@ function renderProfile() {
   document.getElementById('profile-name').textContent   = d.displayName || d.username;
   document.getElementById('profile-handle').textContent = '@' + d.username + ' · ricorra.io/@' + d.username;
 
+  // Total active subscriber count across all plans
+  const totalSubs = (d.plans || []).reduce((sum, p) => sum + (p.subscriberCount || 0), 0);
+  const subCountEl = document.getElementById('profile-sub-count');
+  if (subCountEl && totalSubs > 0) {
+    subCountEl.textContent = totalSubs.toLocaleString() + ' subscriber' + (totalSubs !== 1 ? 's' : '');
+    subCountEl.style.display = 'block';
+  }
+
   // Bio
   if (d.bio) {
     const bioEl = document.getElementById('profile-bio');
@@ -521,7 +530,15 @@ function renderPlans() {
     card.innerHTML = `
       <div class="plan-card-top"></div>
       <div class="plan-card-body">
-        <div class="plan-name">${escHtml(plan.name)}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <div class="plan-name">${escHtml(plan.name)}</div>
+          ${plan.subscriberCount > 0 ? `
+          <div style="font-size:11px;font-weight:600;color:var(--gray-text);
+            background:var(--warm-white);border:1px solid var(--stone);
+            border-radius:20px;padding:3px 10px;white-space:nowrap;flex-shrink:0;">
+            ${plan.subscriberCount} subscriber${plan.subscriberCount !== 1 ? 's' : ''}
+          </div>` : ''}
+        </div>
         <div class="plan-desc">${escHtml(plan.desc || 'Bitcoin subscription — payments go directly to the creator\'s wallet.')}</div>
         <div class="plan-price-row">
           <div class="plan-price">$${plan.priceUSD.toFixed(2)}</div>

@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#C49A3C">
+<title>Ricorra — My Subscriptions</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --amber:       #C49A3C;
+  --amber-deep:  #9E7A28;
+  --amber-pale:  #FAF0D7;
+  --parchment:   #FAF8F4;
+  --warm-white:  #F2EFE9;
+  --charcoal:    #1C1C1A;
+  --stone:       #E2DDD6;
+  --gray-text:   #6B6860;
+  --green:       #2D6A4F;
+  --green-pale:  #EAF5EF;
+  --shadow:      0 4px 24px rgba(0,0,0,0.07);
+  --font-display:'Cormorant Garamond', Georgia, serif;
+  --font-ui:     'DM Sans', system-ui, sans-serif;
+}
+*,*::before,*::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body {
+  font-family: var(--font-ui);
+  background: var(--parchment);
+  color: var(--charcoal);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  padding: 14px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--stone);
+  background: var(--parchment);
+  position: sticky; top: 0; z-index: 10;
+}
+.topbar-brand { display:flex; align-items:center; gap:8px; text-decoration:none; }
+.topbar-brand svg { width:26px; height:26px; }
+.topbar-wordmark { font-family:var(--font-display); font-size:17px; font-weight:400; letter-spacing:0.04em; color:var(--charcoal); }
+.topbar-right { display:flex; align-items:center; gap:12px; }
+.topbar-email { font-size:12px; color:var(--gray-text); }
+.topbar-signout { font-size:12px; font-weight:600; color:var(--gray-text); background:none; border:none; cursor:pointer; font-family:var(--font-ui); padding:0; }
+.topbar-signout:hover { color:var(--charcoal); }
+
+/* ── PAGE ── */
+.page { max-width: 560px; margin: 0 auto; padding: 0 20px 64px; }
+
+/* ── STATE SCREENS ── */
+.state-screen {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  min-height:60vh; padding:40px 24px; text-align:center; gap:14px;
+}
+.spinner {
+  width:32px; height:32px;
+  border:3px solid var(--stone); border-top-color:var(--amber);
+  border-radius:50%; animation:spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+.state-title { font-family:var(--font-display); font-size:28px; font-weight:400; }
+.state-body { font-size:14px; color:var(--gray-text); line-height:1.6; max-width:300px; }
+
+/* ── LOGIN FORM ── */
+.login-card {
+  background: white;
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--stone);
+  padding: 32px 28px;
+  margin-top: 40px;
+  animation: fadeUp 0.3s ease both;
+}
+@keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+.login-mark { text-align:center; margin-bottom:20px; }
+.login-mark svg { width:52px; height:52px; }
+.login-title { font-family:var(--font-display); font-size:28px; font-weight:400; text-align:center; margin-bottom:6px; }
+.login-sub { font-size:13px; color:var(--gray-text); text-align:center; margin-bottom:24px; line-height:1.6; }
+.login-input {
+  width:100%; padding:13px 16px;
+  font-family:var(--font-ui); font-size:15px; color:var(--charcoal);
+  background:var(--warm-white); border:1.5px solid var(--stone);
+  border-radius:12px; outline:none; transition:border-color 0.15s;
+  margin-bottom:12px;
+}
+.login-input:focus { border-color:var(--amber); }
+.login-btn {
+  width:100%; padding:14px; background:var(--amber); color:white;
+  font-family:var(--font-ui); font-size:15px; font-weight:600;
+  border:none; border-radius:50px; cursor:pointer; transition:background 0.15s;
+}
+.login-btn:hover { background:var(--amber-deep); }
+.login-btn:disabled { opacity:0.6; cursor:not-allowed; }
+.login-hint { font-size:11px; color:var(--gray-text); text-align:center; margin-top:12px; line-height:1.6; }
+
+/* ── SENT STATE ── */
+.sent-card {
+  background:white; border-radius:20px; box-shadow:var(--shadow);
+  border:1px solid var(--stone); padding:32px 28px; margin-top:40px;
+  text-align:center; animation:fadeUp 0.3s ease both;
+}
+.sent-icon { font-size:40px; margin-bottom:16px; }
+.sent-title { font-family:var(--font-display); font-size:24px; font-weight:400; margin-bottom:8px; }
+.sent-body { font-size:14px; color:var(--gray-text); line-height:1.7; }
+
+/* ── ACCOUNT HEADER ── */
+.account-header {
+  padding: 32px 0 20px;
+  animation: fadeUp 0.3s ease both;
+}
+.account-greeting {
+  font-family: var(--font-display);
+  font-size: 32px; font-weight: 400;
+  color: var(--charcoal);
+  margin-bottom: 4px;
+}
+.account-sub { font-size:13px; color:var(--gray-text); }
+
+/* ── SECTION LABEL ── */
+.section-label {
+  font-size:10px; font-weight:700; letter-spacing:0.18em;
+  text-transform:uppercase; color:var(--gray-text); margin-bottom:12px;
+}
+
+/* ── SUBSCRIPTION CARDS ── */
+.sub-card {
+  background:white; border-radius:18px; border:1.5px solid var(--stone);
+  box-shadow:var(--shadow); overflow:hidden; margin-bottom:14px;
+  animation:fadeUp 0.35s ease both;
+}
+.sub-card-top { height:4px; background:var(--amber); }
+.sub-card-top.paused  { background:var(--gray-text); }
+.sub-card-top.overdue { background:#D97706; }
+.sub-card-top.canceled { background:#9A9690; }
+.sub-card-body { padding:18px 20px; }
+.sub-merchant { font-size:10px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:var(--gray-text); margin-bottom:4px; }
+.sub-plan { font-family:var(--font-display); font-size:22px; font-weight:500; color:var(--charcoal); margin-bottom:2px; }
+.sub-desc { font-size:12px; color:var(--gray-text); margin-bottom:12px; line-height:1.5; }
+.sub-row { display:flex; justify-content:space-between; font-size:12px; padding:4px 0; border-bottom:1px solid var(--stone); }
+.sub-row:last-of-type { border-bottom:none; }
+.sub-label { color:var(--gray-text); }
+.sub-val   { font-weight:600; color:var(--charcoal); }
+.sub-val.green  { color:var(--green); }
+.sub-val.amber  { color:#D97706; }
+.sub-val.red    { color:#991B1B; }
+.sub-actions { display:flex; gap:8px; margin-top:14px; }
+.sub-btn-primary {
+  flex:1; background:var(--amber); color:white; border:none;
+  border-radius:50px; padding:10px; font-family:var(--font-ui);
+  font-size:13px; font-weight:600; text-decoration:none;
+  text-align:center; cursor:pointer; transition:background 0.15s;
+}
+.sub-btn-primary:hover { background:var(--amber-deep); }
+.sub-btn-secondary {
+  background:var(--warm-white); color:var(--charcoal);
+  border:1.5px solid var(--stone); border-radius:50px;
+  padding:10px 16px; font-family:var(--font-ui);
+  font-size:13px; font-weight:600; text-decoration:none;
+  text-align:center; cursor:pointer; transition:all 0.15s;
+}
+.sub-btn-secondary:hover { border-color:var(--amber); color:var(--amber-deep); }
+
+/* ── EMPTY STATE ── */
+.empty-state {
+  text-align:center; padding:48px 24px;
+  background:var(--warm-white); border-radius:16px;
+  border:1px solid var(--stone); margin-top:8px;
+}
+.empty-title { font-family:var(--font-display); font-size:22px; font-weight:400; margin-bottom:8px; }
+.empty-body { font-size:13px; color:var(--gray-text); line-height:1.6; margin-bottom:20px; }
+.empty-link {
+  display:inline-block; background:var(--amber); color:white;
+  text-decoration:none; padding:10px 24px; border-radius:50px;
+  font-size:13px; font-weight:600;
+}
+
+/* ── FOOTER ── */
+.account-footer { text-align:center; padding:32px 0 0; font-size:11px; color:var(--gray-text); line-height:1.8; }
+.account-footer a { color:var(--amber-deep); text-decoration:none; font-weight:600; }
+
+/* ── TOAST ── */
+.toast {
+  position:fixed; bottom:32px; left:50%; transform:translateX(-50%) translateY(20px);
+  background:var(--charcoal); color:var(--parchment);
+  padding:10px 20px; border-radius:50px; font-size:13px; font-weight:600;
+  z-index:200; opacity:0; pointer-events:none; transition:all 0.25s; white-space:nowrap;
+}
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="topbar-brand" href="https://ricorra.com">
+    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="100" cy="100" r="96" fill="#C49A3C"/>
+      <circle cx="100" cy="100" r="88" fill="none" stroke="#D4AA52" stroke-width="1.5" opacity="0.6"/>
+      <text x="100" y="100" text-anchor="middle" dominant-baseline="central"
+        font-family="'Cormorant Garamond',Georgia,serif" font-size="148" font-weight="400"
+        fill="#FAF8F4" opacity="0.42">₿</text>
+      <text x="100" y="100" text-anchor="middle" dominant-baseline="central"
+        font-family="'Cormorant Garamond',Georgia,serif" font-size="14" font-weight="300"
+        fill="#FAF8F4" letter-spacing="10" dy="-4">ricorra</text>
+    </svg>
+    <span class="topbar-wordmark">ricorra</span>
+  </a>
+  <div class="topbar-right">
+    <span class="topbar-email" id="topbar-email" style="display:none;"></span>
+    <button class="topbar-signout" id="signout-btn" style="display:none;" onclick="signOut()">Sign out</button>
+  </div>
+</header>
+
+<div class="page">
+
+  <!-- Loading -->
+  <div class="state-screen" id="loading-screen">
+    <div class="spinner"></div>
+    <div class="state-body">Loading…</div>
+  </div>
+
+  <!-- Login form -->
+  <div id="login-screen" style="display:none;">
+    <div class="login-card">
+      <div class="login-mark">
+        <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="100" cy="100" r="96" fill="#C49A3C"/>
+          <text x="100" y="100" text-anchor="middle" dominant-baseline="central"
+            font-family="'Cormorant Garamond',Georgia,serif" font-size="148" font-weight="400"
+            fill="#FAF8F4" opacity="0.42">₿</text>
+          <text x="100" y="100" text-anchor="middle" dominant-baseline="central"
+            font-family="'Cormorant Garamond',Georgia,serif" font-size="14" font-weight="300"
+            fill="#FAF8F4" letter-spacing="10" dy="-4">ricorra</text>
+        </svg>
+      </div>
+      <div class="login-title">My Subscriptions</div>
+      <div class="login-sub">Enter your email to view and manage all your Ricorra subscriptions in one place.</div>
+      <input type="email" class="login-input" id="login-email" placeholder="your@email.com"
+        onkeydown="if(event.key==='Enter')requestLink()">
+      <button class="login-btn" id="login-btn" onclick="requestLink()">Send sign-in link</button>
+      <div class="login-hint">We'll send you a magic link — no password needed.</div>
+    </div>
+  </div>
+
+  <!-- Sent confirmation -->
+  <div id="sent-screen" style="display:none;">
+    <div class="sent-card">
+      <div class="sent-icon">📬</div>
+      <div class="sent-title">Check your email</div>
+      <div class="sent-body">
+        We sent a sign-in link to <strong id="sent-email"></strong>.<br>
+        Click it to view your subscriptions.<br><br>
+        <span style="font-size:12px;color:var(--gray-text);">Link expires in 15 minutes. Check your spam folder if you don't see it.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error state -->
+  <div id="error-screen" style="display:none;">
+    <div class="state-screen">
+      <div style="font-size:36px;">∅</div>
+      <div class="state-title">Link expired</div>
+      <div class="state-body" id="error-body">This sign-in link has expired. Request a new one below.</div>
+      <button onclick="showLoginScreen()" class="login-btn" style="max-width:200px;">Try again</button>
+    </div>
+  </div>
+
+  <!-- Account dashboard -->
+  <div id="account-screen" style="display:none;">
+
+    <div class="account-header">
+      <div class="account-greeting" id="account-greeting">Your subscriptions</div>
+      <div class="account-sub" id="account-sub-count"></div>
+    </div>
+
+    <div class="section-label">Active subscriptions</div>
+    <div id="subs-list"></div>
+
+    <div class="account-footer">
+      <div style="font-family:var(--font-display);font-size:14px;font-weight:400;color:var(--charcoal);margin-bottom:4px;letter-spacing:0.06em;">ricorra</div>
+      Subscriptions, self-sovereign.<br>
+      <a href="https://ricorra.com">ricorra.com</a> ·
+      <a href="https://ricorra.com/privacy">Privacy</a> ·
+      <a href="mailto:hello@ricorra.com">Support</a>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+const API_BASE   = 'https://ricorra.io';
+const TOKEN_KEY  = 'ricorra_sub_session';
+let accountData  = null;
+
+// ── INIT ─────────────────────────────────────────────
+async function init() {
+  // Check for session in URL hash
+  const hash = window.location.hash;
+  if (hash.startsWith('#session=')) {
+    const token = hash.slice(9);
+    localStorage.setItem(TOKEN_KEY, token);
+    window.history.replaceState(null, '', window.location.pathname);
+  }
+
+  // Check for errors
+  const params = new URLSearchParams(location.search);
+  const error  = params.get('error');
+  if (error) {
+    showErrorScreen(error);
+    return;
+  }
+
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (!token) {
+    showLoginScreen();
+    return;
+  }
+
+  // Load subscriptions
+  try {
+    const res = await fetch(API_BASE + '/account/subscriptions', {
+      headers: { 'Authorization': 'Bearer ' + token },
+    });
+    if (!res.ok) {
+      localStorage.removeItem(TOKEN_KEY);
+      showLoginScreen();
+      return;
+    }
+    accountData = await res.json();
+  } catch(e) {
+    showLoginScreen();
+    return;
+  }
+
+  renderAccount();
+}
+
+// ── REQUEST MAGIC LINK ───────────────────────────────
+async function requestLink() {
+  const emailInput = document.getElementById('login-email');
+  const btn        = document.getElementById('login-btn');
+  const email      = (emailInput?.value || '').trim().toLowerCase();
+
+  if (!email || !email.includes('@')) {
+    showToast('Please enter a valid email address');
+    emailInput?.focus();
+    return;
+  }
+
+  btn.disabled    = true;
+  btn.textContent = 'Sending…';
+
+  try {
+    const res = await fetch(API_BASE + '/account/request', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ email }),
+    });
+
+    if (!res.ok) throw new Error('Failed');
+
+    document.getElementById('sent-email').textContent = email;
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('sent-screen').style.display  = 'block';
+
+  } catch(e) {
+    showToast('Something went wrong — please try again');
+    btn.disabled    = false;
+    btn.textContent = 'Send sign-in link';
+  }
+}
+
+// ── RENDER ACCOUNT ───────────────────────────────────
+function renderAccount() {
+  const d = accountData;
+
+  // Topbar
+  const emailEl   = document.getElementById('topbar-email');
+  const signoutEl = document.getElementById('signout-btn');
+  if (emailEl)   { emailEl.textContent = d.email; emailEl.style.display = 'block'; }
+  if (signoutEl)   signoutEl.style.display = 'block';
+
+  // Header
+  const firstName = d.email.split('@')[0];
+  document.getElementById('account-greeting').textContent =
+    'Hello, ' + firstName.charAt(0).toUpperCase() + firstName.slice(1) + '.';
+
+  const subs      = d.subscriptions || [];
+  const activeCnt = subs.filter(s => s.status === 'active').length;
+  document.getElementById('account-sub-count').textContent =
+    activeCnt + ' active subscription' + (activeCnt !== 1 ? 's' : '') +
+    (subs.length > activeCnt ? ` · ${subs.length - activeCnt} inactive` : '');
+
+  // Subscription list
+  const list = document.getElementById('subs-list');
+  list.innerHTML = '';
+
+  if (subs.length === 0) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-title">No subscriptions yet</div>
+        <div class="empty-body">When you subscribe to a creator or merchant using Ricorra, your subscriptions will appear here.</div>
+        <a href="https://ricorra.com" class="empty-link">Learn about Ricorra →</a>
+      </div>`;
+    document.getElementById('account-screen').style.display = 'block';
+    document.getElementById('loading-screen').style.display = 'none';
+    return;
+  }
+
+  // Sort: active first, then paused, overdue, canceled
+  const order = { active:0, paused:1, overdue:2, canceled:3 };
+  subs.sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9));
+
+  subs.forEach((sub, idx) => {
+    const card = document.createElement('div');
+    card.className = 'sub-card';
+    card.style.animationDelay = (idx * 0.05) + 's';
+
+    const intervalStr = sub.interval === 'annual' ? 'year' : 'month';
+
+    let renewalText = '—';
+    let renewalClass = '';
+    if (sub.status === 'paused' && sub.pauseUntil) {
+      const d = new Date(sub.pauseUntil);
+      renewalText = 'Resumes ' + d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+      renewalClass = 'amber';
+    } else if (sub.nextRenewal) {
+      const d       = new Date(sub.nextRenewal);
+      const daysOut = Math.ceil((d - Date.now()) / 86400000);
+      renewalText   = d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+      if (daysOut <= 3)  renewalClass = 'amber';
+      if (daysOut <= 0)  renewalClass = 'red';
+    } else if (sub.status === 'canceled') {
+      renewalText = 'Ended';
+    }
+
+    const statusLabel = {
+      active:'Active', paused:'Paused', overdue:'Overdue', canceled:'Canceled',
+    }[sub.status] || sub.status;
+
+    const statusClass = {
+      active:'green', paused:'amber', overdue:'amber', canceled:'',
+    }[sub.status] || '';
+
+    const showPay = sub.status === 'overdue' || sub.status === 'canceled' ||
+      (sub.nextRenewal && Math.ceil((new Date(sub.nextRenewal) - Date.now()) / 86400000) <= 7);
+
+    card.innerHTML = `
+      <div class="sub-card-top ${sub.status !== 'active' ? sub.status : ''}"></div>
+      <div class="sub-card-body">
+        <div class="sub-merchant">${escHtml(sub.merchantName || 'Ricorra Merchant')}</div>
+        <div class="sub-plan">${escHtml(sub.planName)}</div>
+        ${sub.planDesc ? `<div class="sub-desc">${escHtml(sub.planDesc)}</div>` : ''}
+        <div style="background:var(--warm-white);border-radius:10px;padding:10px 12px;margin:10px 0;">
+          <div class="sub-row">
+            <span class="sub-label">Price</span>
+            <span class="sub-val">$${sub.priceUSD.toFixed(2)} / ${intervalStr}</span>
+          </div>
+          <div class="sub-row">
+            <span class="sub-label">Status</span>
+            <span class="sub-val ${statusClass}">${statusLabel}</span>
+          </div>
+          <div class="sub-row">
+            <span class="sub-label">${sub.status === 'paused' ? 'Paused until' : 'Next renewal'}</span>
+            <span class="sub-val ${renewalClass}">${renewalText}</span>
+          </div>
+        </div>
+        <div class="sub-actions">
+          <a href="${escHtml(sub.portalLink)}" class="sub-btn-primary" target="_blank">
+            Manage →
+          </a>
+          ${showPay ? `<a href="${escHtml(sub.paymentLink)}" class="sub-btn-secondary" target="_blank">Pay now</a>` : ''}
+        </div>
+      </div>`;
+    list.appendChild(card);
+  });
+
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('account-screen').style.display = 'block';
+}
+
+// ── SIGN OUT ─────────────────────────────────────────
+function signOut() {
+  localStorage.removeItem(TOKEN_KEY);
+  location.reload();
+}
+
+// ── SCREEN HELPERS ───────────────────────────────────
+function showLoginScreen() {
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display   = 'block';
+}
+
+function showErrorScreen(error) {
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('error-screen').style.display   = 'flex';
+  const msgs = {
+    missing_token: 'No sign-in token found. Please request a new link.',
+    invalid_token: 'This sign-in link is invalid or has already been used.',
+    expired_token: 'This sign-in link has expired. Please request a new one.',
+  };
+  const bodyEl = document.getElementById('error-body');
+  if (bodyEl) bodyEl.textContent = msgs[error] || 'Something went wrong. Please try again.';
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+let toastTimeout;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+window.addEventListener('load', init);
+</script>
+</body>
+</html>

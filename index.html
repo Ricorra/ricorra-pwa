@@ -2015,6 +2015,65 @@ body[dir="rtl"] .search-icon { left: auto; right: 26px; }
       </div>
     </div>
 
+    <!-- EMAIL LIST INTEGRATIONS -->
+    <div class="settings-section">
+      <div class="settings-label">Email List Integrations</div>
+      <div class="settings-hint" style="padding:0 16px 12px;font-size:12px;color:var(--gray-text);line-height:1.5;">
+        Automatically add subscribers to your email list when they pay, and remove them when they cancel. Connect one or more platforms below.
+      </div>
+
+      <!-- Kit -->
+      <div class="settings-row">
+        <label style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:15px;">📧</span> Kit (ConvertKit)
+        </label>
+        <input class="settings-input" id="settings-kit-api-key" type="text" placeholder="API key from kit.com/account/developer">
+        <div class="settings-hint">Subscribers added to your Kit audience on payment. Removed on cancellation. <a href="https://kit.com/account/developer" target="_blank" style="color:var(--amber-deep);font-weight:600;text-decoration:none;">Get API key →</a></div>
+      </div>
+      <div class="settings-row">
+        <label style="color:var(--gray-text);font-size:12px;">Kit Tag (optional)</label>
+        <input class="settings-input" id="settings-kit-tag" type="text" placeholder="e.g. ricorra-subscriber">
+        <div class="settings-hint">Tag to apply when subscriber is added. Leave blank to add without a tag.</div>
+      </div>
+
+      <!-- Beehiiv -->
+      <div class="settings-row" style="margin-top:8px;padding-top:12px;border-top:1px solid var(--stone);">
+        <label style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:15px;">🐝</span> Beehiiv
+        </label>
+        <input class="settings-input" id="settings-beehiiv-api-key" type="text" placeholder="API key from app.beehiiv.com/settings/api">
+        <div class="settings-hint"><a href="https://app.beehiiv.com/settings/api" target="_blank" style="color:var(--amber-deep);font-weight:600;text-decoration:none;">Get API key →</a></div>
+      </div>
+      <div class="settings-row">
+        <label style="color:var(--gray-text);font-size:12px;">Beehiiv Publication ID</label>
+        <input class="settings-input" id="settings-beehiiv-pub-id" type="text" placeholder="pub_xxxxxxxxxx">
+        <div class="settings-hint">Found in your Beehiiv publication settings URL.</div>
+      </div>
+
+      <!-- Mailchimp -->
+      <div class="settings-row" style="margin-top:8px;padding-top:12px;border-top:1px solid var(--stone);">
+        <label style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:15px;">🐒</span> Mailchimp
+        </label>
+        <input class="settings-input" id="settings-mailchimp-api-key" type="text" placeholder="xxxxxxxxxxxx-us1">
+        <div class="settings-hint">Include the datacenter suffix (e.g. -us1). <a href="https://admin.mailchimp.com/account/api/" target="_blank" style="color:var(--amber-deep);font-weight:600;text-decoration:none;">Get API key →</a></div>
+      </div>
+      <div class="settings-row">
+        <label style="color:var(--gray-text);font-size:12px;">Mailchimp Audience ID</label>
+        <input class="settings-input" id="settings-mailchimp-list-id" type="text" placeholder="Audience/List ID">
+        <div class="settings-hint">Found in Mailchimp → Audience → Settings → Audience name and defaults.</div>
+      </div>
+
+      <!-- Generic webhook for others -->
+      <div class="settings-row" style="margin-top:8px;padding-top:12px;border-top:1px solid var(--stone);">
+        <label style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:15px;">🔗</span> Other (MailerLite, Ghost, ActiveCampaign…)
+        </label>
+        <input class="settings-input" id="settings-list-webhook-url" type="url" placeholder="https://your-platform.com/subscribe">
+        <div class="settings-hint">We'll POST <code style="font-size:10px;background:var(--warm-white);padding:1px 5px;border-radius:4px;">{"email":"...", "action":"subscribe"|"unsubscribe"}</code> to this URL on every subscription change.</div>
+      </div>
+    </div>
+
     <!-- TAX -->
     <div class="settings-section">
       <div class="settings-label" id="i18n-section-tax">Tax</div>
@@ -2148,6 +2207,38 @@ body[dir="rtl"] .search-icon { left: auto; right: 26px; }
       <label class="form-label" id="i18n-form-plan-desc">Description (optional)</label>
       <input class="form-input" id="plan-desc-input" type="text" placeholder="What's included in this plan?">
     </div>
+
+    <!-- Trial period -->
+    <div class="form-group">
+      <label class="form-label">Free Trial (optional)</label>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <input class="form-input" id="plan-trial-input" type="number" min="0" max="90" step="1"
+          placeholder="0" style="width:80px;text-align:center;" oninput="updateTrialUI()">
+        <span style="font-size:14px;color:var(--gray-text);">days free</span>
+      </div>
+      <div style="font-size:11px;color:var(--gray-text);margin-top:4px;">Leave blank or 0 for no trial. Subscriber gets access immediately, then receives payment reminders before the trial ends.</div>
+    </div>
+
+    <!-- Upfront payment toggle -->
+    <div class="form-group" id="trial-upfront-group" style="display:none;">
+      <div class="toggle-row" style="padding:0;">
+        <div class="toggle-label-group">
+          <div class="toggle-label" style="font-size:13px;">Require upfront payment to start trial</div>
+          <div class="toggle-hint">Subscriber pays a small amount (e.g. $1) before trial begins. Filters out tire-kickers.</div>
+        </div>
+        <label class="toggle-wrap">
+          <input type="checkbox" class="toggle-input" id="plan-trial-upfront" onchange="updateTrialUI()">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div id="trial-upfront-amount-group" style="display:none;margin-top:10px;">
+        <div class="input-prefix-group">
+          <span class="input-prefix">$</span>
+          <input class="form-input" id="plan-trial-upfront-amount" type="number" min="0.01" step="0.01"
+            placeholder="1.00" style="padding-left:28px;">
+        </div>
+      </div>
+    </div>
     <button class="save-btn" onclick="savePlan()" id="i18n-btn-save-plan" style="margin-top:8px;">Save Plan</button>
     <button onclick="closePlanModal()" style="width:100%;background:none;border:none;color:var(--gray-text);font-family:var(--font-ui);font-size:14px;cursor:pointer;padding:12px;margin-top:4px;" id="i18n-btn-cancel">Cancel</button>
   </div>
@@ -2239,6 +2330,13 @@ let settings = {
   twitter:        '',
   instagram:      '',
   nostr:          '',
+  kitApiKey:         '',
+  kitTag:            '',
+  beehiivApiKey:     '',
+  beehiivPubId:      '',
+  mailchimpApiKey:   '',
+  mailchimpListId:   '',
+  listWebhookUrl:    '',
 };
 let plans       = [];   // [{ id, name, priceUSD, interval, desc, status, createdAt, shareToken }]
 let subscribers = [];   // [{ id, email, planId, status, nextRenewal, payments[] }]
@@ -3022,9 +3120,49 @@ async function checkSession() {
     });
     if (res.ok) {
       const data = await res.json();
-      settings.email       = data.email       || '';
-      settings.displayName = data.displayName || '';
+      settings.email       = data.email        || '';
+      settings.displayName = data.displayName  || '';
       settings.btcWallet   = data.walletAddress|| '';
+
+      // Pull full settings from KV to restore after localStorage clear
+      try {
+        const sRes = await fetch(API_BASE + '/merchant/settings', {
+          headers: { 'Authorization': 'Bearer ' + token },
+        });
+        if (sRes.ok) {
+          const sData = await sRes.json();
+          settings.displayName   = sData.displayName   || settings.displayName;
+          settings.btcWallet     = sData.btcWallet      || settings.btcWallet;
+          settings.lightningAddr = sData.lightningAddr  || '';
+          settings.digestEnabled = sData.digestEnabled  || false;
+          settings.digestEmail   = sData.digestEmail    || '';
+          settings.username      = sData.username       || '';
+          settings.bio           = sData.bio            || '';
+          settings.website       = sData.website        || '';
+          settings.twitter       = sData.twitter        || '';
+          settings.instagram     = sData.instagram      || '';
+          settings.nostr         = sData.nostr          || '';
+          settings.webhookUrl    = sData.webhookUrl     || '';
+          settings.webhookSecret = sData.webhookSecret  || '';
+          saveSettingsToStorage();
+        }
+        // Load integrations
+        const iRes = await fetch(API_BASE + '/merchant/integrations', {
+          headers: { 'Authorization': 'Bearer ' + token },
+        });
+        if (iRes.ok) {
+          const iData = await iRes.json();
+          settings.kitApiKey       = iData.kitApiKey       || '';
+          settings.kitTag          = iData.kitTag          || '';
+          settings.beehiivApiKey   = iData.beehiivApiKey   || '';
+          settings.beehiivPubId    = iData.beehiivPubId    || '';
+          settings.mailchimpApiKey = iData.mailchimpApiKey || '';
+          settings.mailchimpListId = iData.mailchimpListId || '';
+          settings.listWebhookUrl  = iData.listWebhookUrl  || '';
+          saveSettingsToStorage();
+        }
+      } catch(e) {}
+
       showAppScreen();
     } else {
       clearSession();
@@ -3089,6 +3227,21 @@ async function saveSettings() {
   if (webhookUrlEl)    settings.webhookUrl    = webhookUrlEl.value.trim();
   if (webhookSecretEl) settings.webhookSecret = webhookSecretEl.value.trim();
 
+  // Integration fields
+  const intFields = [
+    ['settings-kit-api-key',       'kitApiKey'],
+    ['settings-kit-tag',           'kitTag'],
+    ['settings-beehiiv-api-key',   'beehiivApiKey'],
+    ['settings-beehiiv-pub-id',    'beehiivPubId'],
+    ['settings-mailchimp-api-key', 'mailchimpApiKey'],
+    ['settings-mailchimp-list-id', 'mailchimpListId'],
+    ['settings-list-webhook-url',  'listWebhookUrl'],
+  ];
+  intFields.forEach(([id, key]) => {
+    const el = document.getElementById(id);
+    if (el) settings[key] = el.value.trim();
+  });
+
   // Profile fields
   const usernameEl  = document.getElementById('settings-username');
   const bioEl       = document.getElementById('settings-bio');
@@ -3136,6 +3289,20 @@ async function saveSettings() {
           body: JSON.stringify({ webhookUrl: settings.webhookUrl, webhookSecret: settings.webhookSecret }),
         });
       }
+      // Push email list integrations
+      await fetch(API_BASE + '/merchant/integrations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({
+          kitApiKey:         settings.kitApiKey         || '',
+          kitTag:            settings.kitTag            || '',
+          beehiivApiKey:     settings.beehiivApiKey     || '',
+          beehiivPubId:      settings.beehiivPubId      || '',
+          mailchimpApiKey:   settings.mailchimpApiKey   || '',
+          mailchimpListId:   settings.mailchimpListId   || '',
+          listWebhookUrl:    settings.listWebhookUrl    || '',
+        }),
+      });
       // Push username + profile
       if (settings.username) {
         const usernameRes = await fetch(API_BASE + '/merchant/username', {
@@ -3415,6 +3582,12 @@ function openCreatePlan() {
   document.getElementById('plan-name-input').value  = '';
   document.getElementById('plan-price-input').value = '';
   document.getElementById('plan-desc-input').value  = '';
+  document.getElementById('plan-trial-input').value = '';
+  const upfrontCb = document.getElementById('plan-trial-upfront');
+  if (upfrontCb) upfrontCb.checked = false;
+  const upfrontAmt = document.getElementById('plan-trial-upfront-amount');
+  if (upfrontAmt) upfrontAmt.value = '';
+  updateTrialUI();
   selectInterval('monthly');
   const title = document.getElementById('plan-modal-title');
   const sub   = document.getElementById('plan-modal-sub');
@@ -3434,6 +3607,12 @@ function openEditPlan(planId) {
   document.getElementById('plan-name-input').value  = plan.name;
   document.getElementById('plan-price-input').value = plan.priceUSD;
   document.getElementById('plan-desc-input').value  = plan.desc || '';
+  document.getElementById('plan-trial-input').value = plan.trialDays || '';
+  const upfrontCb = document.getElementById('plan-trial-upfront');
+  if (upfrontCb) upfrontCb.checked = !!plan.trialUpfront;
+  const upfrontAmt = document.getElementById('plan-trial-upfront-amount');
+  if (upfrontAmt) upfrontAmt.value = plan.trialUpfrontAmount || '';
+  updateTrialUI();
   selectInterval(plan.interval || 'monthly');
   const title = document.getElementById('plan-modal-title');
   const sub   = document.getElementById('plan-modal-sub');
@@ -3446,6 +3625,15 @@ function closePlanModal() {
   document.getElementById('plan-modal').classList.remove('active');
 }
 
+function updateTrialUI() {
+  const days         = parseInt(document.getElementById('plan-trial-input')?.value || '0') || 0;
+  const upfrontGroup = document.getElementById('trial-upfront-group');
+  const upfrontCb    = document.getElementById('plan-trial-upfront');
+  const upfrontAmt   = document.getElementById('trial-upfront-amount-group');
+  if (upfrontGroup) upfrontGroup.style.display = days > 0 ? 'block' : 'none';
+  if (upfrontAmt)   upfrontAmt.style.display   = (upfrontCb?.checked && days > 0) ? 'block' : 'none';
+}
+
 function selectInterval(v) {
   selectedInterval = v;
   document.getElementById('interval-monthly').classList.toggle('active', v === 'monthly');
@@ -3453,10 +3641,13 @@ function selectInterval(v) {
 }
 
 function savePlan() {
-  const name  = (document.getElementById('plan-name-input').value  || '').trim();
-  const price = parseFloat(document.getElementById('plan-price-input').value || '');
-  const desc  = (document.getElementById('plan-desc-input').value  || '').trim();
-  const id    = document.getElementById('plan-modal-id').value;
+  const name        = (document.getElementById('plan-name-input').value  || '').trim();
+  const price       = parseFloat(document.getElementById('plan-price-input').value || '');
+  const desc        = (document.getElementById('plan-desc-input').value  || '').trim();
+  const id          = document.getElementById('plan-modal-id').value;
+  const trialDays   = parseInt(document.getElementById('plan-trial-input')?.value || '0') || 0;
+  const trialUpfront= !!(document.getElementById('plan-trial-upfront')?.checked);
+  const trialUpfrontAmount = parseFloat(document.getElementById('plan-trial-upfront-amount')?.value || '0') || 0;
 
   if (!name) { showToast('Please enter a plan name'); return; }
   if (!price || price <= 0) { showToast('Please enter a valid price'); return; }
@@ -3465,22 +3656,28 @@ function savePlan() {
     // Edit existing
     const idx = plans.findIndex(p => p.id === id);
     if (idx > -1) {
-      plans[idx].name      = name;
-      plans[idx].priceUSD  = price;
-      plans[idx].interval  = selectedInterval;
-      plans[idx].desc      = desc;
+      plans[idx].name               = name;
+      plans[idx].priceUSD           = price;
+      plans[idx].interval           = selectedInterval;
+      plans[idx].desc               = desc;
+      plans[idx].trialDays          = trialDays;
+      plans[idx].trialUpfront       = trialUpfront;
+      plans[idx].trialUpfrontAmount = trialUpfrontAmount;
     }
   } else {
     // Create new
     plans.push({
-      id:          generateId(),
+      id:                   generateId(),
       name,
-      priceUSD:    price,
-      interval:    selectedInterval,
+      priceUSD:             price,
+      interval:             selectedInterval,
       desc,
-      status:      'active',
-      createdAt:   new Date().toISOString(),
-      shareToken:  generateShareToken(),
+      trialDays,
+      trialUpfront,
+      trialUpfrontAmount,
+      status:               'active',
+      createdAt:            new Date().toISOString(),
+      shareToken:           generateShareToken(),
     });
   }
 
@@ -3507,13 +3704,16 @@ async function pushPlanToWorker(plan) {
       method:  'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
       body: JSON.stringify({
-        id:          plan.id,
-        name:        plan.name,
-        priceUSD:    plan.priceUSD,
-        interval:    plan.interval,
-        desc:        plan.desc || '',
-        status:      plan.status,
-        shareToken:  plan.shareToken,
+        id:                   plan.id,
+        name:                 plan.name,
+        priceUSD:             plan.priceUSD,
+        interval:             plan.interval,
+        desc:                 plan.desc               || '',
+        status:               plan.status,
+        shareToken:           plan.shareToken,
+        trialDays:            plan.trialDays           || 0,
+        trialUpfront:         plan.trialUpfront        || false,
+        trialUpfrontAmount:   plan.trialUpfrontAmount  || 0,
       }),
     });
   } catch(e) { /* silent — link will work after next sync */ }
@@ -4384,6 +4584,21 @@ function applySettings() {
   const webhookSecretEl = document.getElementById('settings-webhook-secret');
   if (webhookUrlEl)    webhookUrlEl.value    = settings.webhookUrl    || '';
   if (webhookSecretEl) webhookSecretEl.value = settings.webhookSecret || '';
+
+  // Integration fields
+  const intFields2 = [
+    ['settings-kit-api-key',       'kitApiKey'],
+    ['settings-kit-tag',           'kitTag'],
+    ['settings-beehiiv-api-key',   'beehiivApiKey'],
+    ['settings-beehiiv-pub-id',    'beehiivPubId'],
+    ['settings-mailchimp-api-key', 'mailchimpApiKey'],
+    ['settings-mailchimp-list-id', 'mailchimpListId'],
+    ['settings-list-webhook-url',  'listWebhookUrl'],
+  ];
+  intFields2.forEach(([id, key]) => {
+    const el = document.getElementById(id);
+    if (el) el.value = settings[key] || '';
+  });
 
   // Profile fields
   const usernameEl2  = document.getElementById('settings-username');

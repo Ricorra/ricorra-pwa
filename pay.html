@@ -638,11 +638,22 @@ body {
       <div class="plan-merchant" id="merchant-name">Loading…</div>
       <div class="plan-name" id="plan-name">Plan Name</div>
       <div class="plan-desc" id="plan-desc"></div>
+      <!-- Trial badge — shown when plan has trial days -->
+      <div id="trial-badge" style="display:none;margin-top:10px;">
+        <span style="display:inline-block;background:rgba(255,255,255,0.2);
+          border:1px solid rgba(255,255,255,0.4);border-radius:20px;
+          padding:4px 14px;font-family:sans-serif;font-size:12px;
+          font-weight:700;color:white;letter-spacing:0.04em;">
+          🎉 <span id="trial-badge-text">7 days free</span>
+        </span>
+      </div>
       <div class="plan-pricing">
         <div class="plan-price-usd" id="price-usd">$0.00</div>
         <div class="plan-price-interval" id="price-interval">/ month</div>
         <div class="plan-price-btc" id="price-btc"></div>
       </div>
+      <!-- Trial upfront note — shown when upfront payment required -->
+      <div id="trial-upfront-note" style="display:none;margin-top:6px;font-size:11px;color:rgba(255,255,255,0.7);font-family:sans-serif;"></div>
     </div>
 
     <!-- Payment method tabs (only shown if Lightning available) -->
@@ -793,8 +804,7 @@ body {
 'use strict';
 
 const API_BASE   = 'https://ricorra.io';
-const shareToken    = new URLSearchParams(location.search).get('t') || '';
-const isReactivate  = new URLSearchParams(location.search).get('reactivate') === '1';
+const shareToken = new URLSearchParams(location.search).get('t') || '';
 
 let planData     = null;
 let btcRate      = 0;
@@ -842,39 +852,91 @@ async function init() {
 }
 
 // ── BTC RATE ────────────────────────────────────────
+// Detect subscriber's local currency from browser locale
+const localeCurrency = (() => {
+  try {
+    const locale = navigator.language || 'en-US';
+    const region = locale.split('-')[1] || 'US';
+    const map = {
+      US:'USD', GB:'GBP', EU:'EUR', DE:'EUR', FR:'EUR', IT:'EUR', ES:'EUR',
+      NL:'EUR', BE:'EUR', AT:'EUR', PT:'EUR', FI:'EUR', IE:'EUR', GR:'EUR',
+      CA:'CAD', AU:'AUD', NZ:'NZD', JP:'JPY', CN:'CNY', KR:'KRW', IN:'INR',
+      BR:'BRL', MX:'MXN', CH:'CHF', SE:'SEK', NO:'NOK', DK:'DKK', PL:'PLN',
+      CZ:'CZK', HU:'HUF', RO:'RON', SG:'SGD', HK:'HKD', TH:'THB', ID:'IDR',
+      MY:'MYR', PH:'PHP', ZA:'ZAR', AE:'AED', SA:'SAR', NG:'NGN', TR:'TRY',
+    };
+    return map[region] || 'USD';
+  } catch { return 'USD'; }
+})();
+
+let localRate    = 1;    // USD per local currency unit (used for display only)
+let allRates     = null; // blockchain.info ticker data
+
 async function fetchBTCRate() {
   try {
     const res  = await fetch('https://blockchain.info/ticker');
     const data = await res.json();
-    if (data.USD?.last) { btcRate = data.USD.last; updateBTCDisplay(); return; }
+    allRates = data;
+    if (data.USD?.last) {
+      btcRate = data.USD.last;
+      // Get local currency rate if available
+      if (data[localeCurrency]?.last) {
+        localRate = data[localeCurrency].last;
+      } else {
+        localRate = btcRate; // fallback to USD
+      }
+      updateBTCDisplay();
+      return;
+    }
   } catch(e) {}
   try {
     const res  = await fetch('https://api.coinbase.com/v2/exchange-rates?currency=BTC');
     const data = await res.json();
-    if (data.data?.rates?.USD) { btcRate = parseFloat(data.data.rates.USD); updateBTCDisplay(); }
+    if (data.data?.rates?.USD) {
+      btcRate   = parseFloat(data.data.rates.USD);
+      localRate = data.data.rates[localeCurrency]
+        ? parseFloat(data.data.rates[localeCurrency])
+        : btcRate;
+      updateBTCDisplay();
+    }
   } catch(e) {}
 }
 
 function updateBTCDisplay() {
   if (!planData) return;
-  // Use uniquePriceUSD for the QR amount (subscriber-specific offset)
   const displayPrice = planData.uniquePriceUSD || planData.priceUSD;
   const btcAmt = btcRate > 0 ? (displayPrice / btcRate) : 0;
   const btcStr = btcAmt > 0 ? btcAmt.toFixed(6) + ' BTC' : '—';
 
+  // Show local currency equivalent if different from USD
+  let localStr = '';
+  if (localeCurrency !== 'USD' && localRate > 0 && btcRate > 0) {
+    const localAmt = displayPrice * (localRate / btcRate);
+    try {
+      localStr = new Intl.NumberFormat(navigator.language, {
+        style: 'currency', currency: localeCurrency, maximumFractionDigits: 2,
+      }).format(localAmt);
+    } catch { localStr = ''; }
+  }
+
   const priceBtcEl = document.getElementById('price-btc');
-  if (priceBtcEl) priceBtcEl.textContent = btcAmt > 0 ? '≈ ' + btcStr : '';
+  if (priceBtcEl) {
+    priceBtcEl.textContent = btcAmt > 0
+      ? '≈ ' + btcStr + (localStr ? ' · ' + localStr : '')
+      : '';
+  }
 
   const detailBtc = document.getElementById('detail-btc-amount');
   if (detailBtc) detailBtc.textContent = btcStr;
 
   const detailTotal = document.getElementById('detail-total');
-  if (detailTotal) detailTotal.textContent = '$' + displayPrice.toFixed(2);
+  if (detailTotal) detailTotal.textContent = '$' + displayPrice.toFixed(2) +
+    (localStr ? ' ≈ ' + localStr : '');
 
   const detailLn = document.getElementById('detail-ln-amount');
-  if (detailLn) detailLn.textContent = '$' + displayPrice.toFixed(2) + ' USD';
+  if (detailLn) detailLn.textContent = '$' + displayPrice.toFixed(2) + ' USD' +
+    (localStr ? ' ≈ ' + localStr : '');
 
-  // Rebuild QR with updated BTC amount
   if (activeMethod === 'btc' && planData.walletAddress) {
     buildBTCQR(planData.walletAddress, btcAmt);
   }
@@ -887,9 +949,38 @@ function renderPaymentPage() {
   // Header
   document.getElementById('merchant-name').textContent  = p.merchantName ? p.merchantName.toUpperCase() : 'RICORRA MERCHANT';
   document.getElementById('plan-name').textContent      = isReactivate ? 'Welcome back.' : p.planName;
-  document.getElementById('plan-desc').textContent      = isReactivate ? p.planName + ' — reactivate your subscription below.' : (p.planDesc || '');
-  document.getElementById('price-usd').textContent      = '$' + p.priceUSD.toFixed(2);
-  document.getElementById('price-interval').textContent = '/ ' + (p.interval === 'annual' ? 'year' : 'month');
+  document.getElementById('plan-desc').textContent      = isReactivate
+    ? p.planName + ' — reactivate your subscription below.'
+    : (p.planDesc || '');
+
+  // Trial badge + pricing
+  if (p.trialDays > 0 && !isReactivate) {
+    const badge = document.getElementById('trial-badge');
+    const badgeText = document.getElementById('trial-badge-text');
+    if (badge) badge.style.display = 'block';
+    if (badgeText) badgeText.textContent = p.trialDays + ' days free';
+
+    if (p.trialUpfront && p.trialUpfrontAmount > 0) {
+      document.getElementById('price-usd').textContent      = '$' + p.trialUpfrontAmount.toFixed(2);
+      document.getElementById('price-interval').textContent = 'to start';
+      const note = document.getElementById('trial-upfront-note');
+      if (note) {
+        note.style.display = 'block';
+        note.textContent   = `Then $${p.priceUSD.toFixed(2)} / ${p.interval === 'annual' ? 'year' : 'month'} after your ${p.trialDays}-day trial`;
+      }
+    } else {
+      document.getElementById('price-usd').textContent      = 'Free';
+      document.getElementById('price-interval').textContent = 'for ' + p.trialDays + ' days';
+      const note = document.getElementById('trial-upfront-note');
+      if (note) {
+        note.style.display = 'block';
+        note.textContent   = `Then $${p.priceUSD.toFixed(2)} / ${p.interval === 'annual' ? 'year' : 'month'}. No card required.`;
+      }
+    }
+  } else {
+    document.getElementById('price-usd').textContent      = '$' + p.priceUSD.toFixed(2);
+    document.getElementById('price-interval').textContent = '/ ' + (p.interval === 'annual' ? 'year' : 'month');
+  }
 
   // Amount detail
   document.getElementById('detail-plan-price').textContent = '$' + p.priceUSD.toFixed(2);
